@@ -2,7 +2,7 @@
   // Veleggia Capital rules app. Secrets (FMP key, VAPID key, later Bybit read-only key) are set with
   // `wrangler secret put NAME` or in the Cloudflare dashboard, never in this file or the repo.
   "$schema": "../../node_modules/wrangler/config-schema.json",
-  "name": "veleggia-app",
+  "name": "veleggia-capital",
   // Marc's Cloudflare account (the id is not a secret).
   "account_id": "c4ad492baa9588736c3521811736ae6f",
   "main": "src/index.ts",
