@@ -51,9 +51,7 @@ npx wrangler dev
 ## Cloudflare setup (one time, done by Marc)
 
 1. **D1 database:** Cloudflare dashboard > Storage & Databases > D1 > Create, name `veleggia`. The database ID goes into `apps/app/wrangler.jsonc` (not secret).
-2. **GitHub secrets** (repo Settings > Secrets and variables > Actions):
-   - `CLOUDFLARE_ACCOUNT_ID`: from the Cloudflare dashboard (Workers & Pages overview).
-   - `CLOUDFLARE_API_TOKEN`: Account API tokens > Create token > template "Edit Cloudflare Workers", add the permission Account > D1 > Edit, limit it to this account.
+2. **GitHub secret** (repo Settings > Secrets and variables > Actions): `CLOUDFLARE_API_TOKEN`, from Account API tokens > Create token > template "Edit Cloudflare Workers", plus the permission Account > D1 > Edit, limited to this account. The account id sits in `apps/app/wrangler.jsonc` (not secret).
 3. Every push to `main` then runs the tests and, only if they pass, applies the database migrations and deploys (`.github/workflows/ci.yml`).
 4. **Login:** in Workers & Pages > veleggia-app > Access, "Protect this Worker behind Access", All traffic, a policy allowing only Marc's email. Then put the team domain (`<team>.cloudflareaccess.com`) and the application's AUD tag into `ACCESS_TEAM_DOMAIN` and `ACCESS_AUD` in `wrangler.jsonc` (not secret).
 

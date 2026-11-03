@@ -3,6 +3,8 @@
   // `wrangler secret put NAME` or in the Cloudflare dashboard, never in this file or the repo.
   "$schema": "../../node_modules/wrangler/config-schema.json",
   "name": "veleggia-app",
+  // Marc's Cloudflare account (the id is not a secret).
+  "account_id": "c4ad492baa9588736c3521811736ae6f",
   "main": "src/index.ts",
   "compatibility_date": "2026-10-01",
   "observability": { "enabled": true },
