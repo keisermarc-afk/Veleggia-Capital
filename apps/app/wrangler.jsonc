@@ -25,9 +25,9 @@
   ],
   "vars": {
     // Cloudflare Access (login). Not secret; filled in after Access is set up.
-    // ALLOWED_EMAILS: optional second check after Access, comma-separated; set it in the Cloudflare dashboard.
-    "ACCESS_TEAM_DOMAIN": "",
-    "ACCESS_AUD": "",
-    "ALLOWED_EMAILS": ""
+    // ALLOWED_EMAILS: second check after Access, comma-separated (only Marc).
+    "ACCESS_TEAM_DOMAIN": "keiser-marc.cloudflareaccess.com",
+    "ACCESS_AUD": "81b3b2f70465470b8d6821393e4dfdb01a5074e925305c94d28ff41edf4cdd07",
+    "ALLOWED_EMAILS": "keiser_marc@me.com"
   }
 }
