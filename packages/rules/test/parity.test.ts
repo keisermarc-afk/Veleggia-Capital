@@ -113,3 +113,36 @@ for (const name of readdirSync(join(ROOT, 'fixtures'))) {
     });
   });
 }
+
+import { rangeBars, rangeWatch, fourHourBars, nyToUtcMs } from '../src';
+
+describe('helpers used by the alert engine', () => {
+  const dir = join(ROOT, 'fixtures', '2026-11-03');
+  const full = loadFixture(dir);
+  const fetchedAt = new Date(JSON.parse(readFileSync(join(dir, 'btc_daily.json'), 'utf8')).fetched_at);
+  it('rangeBars ends on the same bar as rangeWatch at every moment', () => {
+    for (const now of moments(fetchedAt)) {
+      const inp = asOf(full, now);
+      const rw = rangeWatch(inp.range_levels, inp.ohlc_btc, inp.ohlc_eth, inp.ohlc_es, inp.ohlc_qqq, inp.ohlc_spx, now);
+      const rb = rangeBars(inp.range_levels, inp.ohlc_btc, inp.ohlc_eth, inp.ohlc_es, inp.ohlc_qqq, inp.ohlc_spx, now);
+      for (const w of rw) {
+        const b = rb.find(x => x.asset === w.asset)!;
+        const last = b.bars[b.bars.length - 1];
+        expect([last.date, last.c]).toEqual([w.day, w.close]);
+      }
+    }
+  });
+  it('reads New York intraday timestamps across the clock change', () => {
+    expect(new Date(nyToUtcMs('2026-10-30 20:00:00')).toISOString()).toBe('2026-10-31T00:00:00.000Z'); // EDT, UTC-4
+    expect(new Date(nyToUtcMs('2026-11-02 19:00:00')).toISOString()).toBe('2026-11-03T00:00:00.000Z'); // EST, UTC-5
+  });
+  it('builds 4H candles that match the ones in Claude\'s alert log', () => {
+    const hourly = JSON.parse(readFileSync(join(dir, 'hourly_eth.json'), 'utf8')).rows;
+    const bars = fourHourBars(hourly, fetchedAt);
+    const at = (iso: string) => bars.find(b => b.start === iso)?.close;
+    // Claude's alerts: "00:00 UTC bar 2,307, 04:00 UTC bar 2,281.89" (2 Nov) and "12:00 UTC bar closed at 2,298.11 after 2,263.39" (3 Nov).
+    expect(at('2026-11-02T00:00:00.000Z')).toBeCloseTo(2306.05, 2);
+    expect(at('2026-11-03T12:00:00.000Z')).toBeCloseTo(2298.1096, 4);
+    expect(at('2026-11-03T08:00:00.000Z')).toBeCloseTo(2263.39, 2);
+  });
+});

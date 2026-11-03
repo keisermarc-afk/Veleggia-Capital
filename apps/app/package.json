@@ -10,11 +10,12 @@
     "db:migrate:remote": "wrangler d1 migrations apply veleggia --remote"
   },
   "dependencies": {
+    "@block65/webcrypto-web-push": "2.0.0",
     "hono": "4.13.13",
     "jose": "6.2.13"
   },
   "devDependencies": {
-    "wrangler": "4.151.3",
-    "@cloudflare/workers-types": "5.20261019.1"
+    "@cloudflare/workers-types": "5.20261019.1",
+    "wrangler": "4.151.3"
   }
 }

@@ -82,3 +82,19 @@ button:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
   .plan-actions { margin-left: 0; width: 100%; }
   .plan-actions button { flex: 1; }
 }
+
+.tabs button { padding: .3rem .55rem; }
+#push-card { margin-bottom: .6rem; }
+.alist { display: flex; flex-direction: column; gap: 1px; background: var(--line); border: 1px solid var(--line); }
+.al { background: var(--panel); padding: .6rem .7rem; display: grid; gap: .25rem; border-left: 3px solid var(--dim); }
+.al.warn { border-left-color: var(--red); }
+.al.good { border-left-color: var(--green); }
+.al.info { border-left-color: var(--amber); }
+.al .h { display: flex; flex-wrap: wrap; gap: .2rem .6rem; align-items: baseline; font-size: .8rem; }
+.al .h b { color: var(--amber); }
+.al .h .t { color: var(--text); font-weight: 700; }
+.al .h .when { color: var(--dim); margin-left: auto; font-size: .75rem; }
+.al .m { font-size: .8rem; color: var(--text); line-height: 1.45; }
+.ok { color: var(--green); }
+.bad { color: var(--red); }
+@media (max-width: 26rem) { .brand { font-size: .85rem; } .tabs button { font-size: .72rem; padding: .3rem .45rem; } }

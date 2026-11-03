@@ -4,6 +4,8 @@ import {
   type LevelRow, type PlanRow,
 } from '../../../packages/data/src';
 import { requireAccess, sameOrigin } from './auth';
+import { runCheck, kvGet, noteFor } from './check';
+import { getVapid, sendToAll } from './push';
 import type { Env } from './env';
 
 type App = { Bindings: Env; Variables: { email: string } };
@@ -95,7 +97,61 @@ const csvResponse = (body: string, name: string) => new Response(body, {
 app.get('/api/export/range_levels.csv', async c => csvResponse(toCsv(LEVEL_COLUMNS, await loadLevels(c.env.DB)), 'range_levels.csv'));
 app.get('/api/export/weekly_plan.csv', async c => csvResponse(toCsv(PLAN_COLUMNS, await loadPlan(c.env.DB)), 'weekly_plan.csv'));
 
+// ---------- Alerts and push ----------
+app.get('/api/alerts', async c => {
+  const limit = Math.min(200, Math.max(1, Number(c.req.query('limit')) || 60));
+  const { results } = await c.env.DB.prepare('SELECT id, at, key, asset, type, level, message FROM alerts ORDER BY id DESC LIMIT ?').bind(limit).all();
+  return c.json({ rows: results });
+});
+
+app.get('/api/status', async c => {
+  const { results: runs } = await c.env.DB.prepare('SELECT at, ok, n_alerts, error, ms FROM runs ORDER BY id DESC LIMIT 12').all();
+  const subs = await c.env.DB.prepare('SELECT COUNT(*) AS n FROM push_subscriptions').first<{ n: number }>();
+  const snap = await kvGet<{ at: string; rules: Record<string, unknown> }>(c.env.DB, 'rules_snapshot');
+  return c.json({ runs, subscriptions: subs?.n ?? 0, fmp_key_set: !!c.env.FMP_API_KEY, snapshot: snap });
+});
+
+app.get('/api/push/key', async c => c.json({ publicKey: (await getVapid(c.env.DB, new URL(c.req.url).origin)).publicKey }));
+
+app.post('/api/push/subscribe', async c => {
+  const body = await c.req.json<{ subscription?: { endpoint?: string; keys?: { p256dh?: string; auth?: string } } }>().catch(() => null);
+  const sub = body?.subscription;
+  if (!sub?.endpoint || !/^https:\/\//.test(sub.endpoint) || !sub.keys?.p256dh || !sub.keys?.auth) return c.json({ error: 'Not a valid push subscription.' }, 400);
+  await c.env.DB.prepare(`INSERT INTO push_subscriptions (endpoint, data, created_at, user_agent) VALUES (?1, ?2, ?3, ?4)
+    ON CONFLICT(endpoint) DO UPDATE SET data = ?2`).bind(sub.endpoint, JSON.stringify({ endpoint: sub.endpoint, expirationTime: null, keys: sub.keys }), new Date().toISOString(), (c.req.header('User-Agent') || '').slice(0, 200)).run();
+  return c.json({ ok: true });
+});
+
+app.post('/api/push/unsubscribe', async c => {
+  const body = await c.req.json<{ endpoint?: string }>().catch(() => null);
+  if (body?.endpoint) await c.env.DB.prepare('DELETE FROM push_subscriptions WHERE endpoint = ?').bind(body.endpoint).run();
+  return c.json({ ok: true });
+});
+
+app.post('/api/push/test', async c => {
+  const vapid = await getVapid(c.env.DB, new URL(c.req.url).origin);
+  const r = await sendToAll(c.env.DB, vapid, [noteFor({ key: 'test-' + Date.now(), asset: 'Veleggia', type: 'Test', level: 'info', message: 'Push alerts work. Range and rule signals will arrive like this.' })]);
+  return c.json(r);
+});
+
+/** Run the rule check now (same as the schedule). Pushes only when ?send=1. */
+app.post('/api/check', async c => {
+  const r = await runCheck(c.env, new Date(), { send: c.req.query('send') === '1', origin: new URL(c.req.url).origin });
+  return c.json(r, r.ok ? 200 : 502);
+});
+
+app.get('/api/export/alerts.csv', async c => {
+  const { results } = await c.env.DB.prepare('SELECT at, asset, type, level, message, key FROM alerts ORDER BY id DESC LIMIT 500').all<Record<string, string>>();
+  return csvResponse(toCsv(['at', 'asset', 'type', 'level', 'message', 'key'], results), 'app_alerts.csv');
+});
+
 app.notFound(c => c.req.path.startsWith('/api/') ? c.json({ error: 'Not found.' }, 404) : c.env.ASSETS.fetch(c.req.raw));
 app.onError((err, c) => { console.error(err); return c.json({ error: 'Something went wrong on the server.' }, 500); });
 
-export default app;
+export default {
+  fetch: app.fetch,
+  // The schedule (wrangler.jsonc "triggers"): run the rule check and push new alerts.
+  async scheduled(event: ScheduledController, env: Env, ctx: ExecutionContext) {
+    ctx.waitUntil(runCheck(env, new Date(event.scheduledTime), { send: true, origin: 'https://veleggia-capital.keiser-marc.workers.dev' }).then(() => undefined));
+  },
+};

@@ -26,7 +26,7 @@ Phone (installed PWA)  ──>  Cloudflare Worker (API + login)  ──>  D1 dat
 
 1. **Rules engine and parity tests** (done): `packages/rules`.
 2. **API and the editing screens** for range levels and the weekly plan (done, waiting for the Cloudflare setup below): `apps/app`, `packages/data`.
-3. Scheduled checks and push alerts.
+3. **Scheduled checks and push alerts** (built): `packages/alerts`, `apps/app/src/check.ts`.
 4. Parallel run next to the dashboard (about 2 weeks). Cutover only with zero rule-state mismatches and every dashboard alert matched by an app alert.
 
 ## The app: `apps/app`
@@ -54,6 +54,17 @@ npx wrangler dev
 2. **GitHub secret** (repo Settings > Secrets and variables > Actions): `CLOUDFLARE_API_TOKEN`, from Account API tokens > Create token > template "Edit Cloudflare Workers", plus the permission Account > D1 > Edit, limited to this account. The account id sits in `apps/app/wrangler.jsonc` (not secret).
 3. Every push to `main` then runs the tests and, only if they pass, applies the database migrations and deploys (`.github/workflows/ci.yml`).
 4. **Login:** in Workers & Pages > veleggia-capital > Access, "Protect this Worker behind Access", All traffic, a policy allowing only Marc's email. Then put the team domain (`<team>.cloudflareaccess.com`) and the application's AUD tag into `ACCESS_TEAM_DOMAIN` and `ACCESS_AUD` in `wrangler.jsonc` (not secret).
+
+## Alerts (step 3)
+
+- **When:** every hour at :05 UTC (crypto daily close at 00:05, every 4H close, ES futures close at 21:05/22:05) and at 16:20 New York on weekdays for the cash index close. Cron in `apps/app/wrangler.jsonc`.
+- **What:** `packages/alerts` follows the close-based rules of Claude's "Dashboard change alerts" task: regime confirmed, early signal, EMA50/EMA200 (crypto) and EMA50/EMA100/EMA200 (indices) close crosses, the two-close EMA50 exit, weekly trend, macro cycle, 200 hold rule, range signals, watch levels and the 4H long trigger. Every event alerts once (unique key). A continuing range break alerts once, not every day. A later FMP revision that flips a state alerts again, marked "revised data".
+- **Not here yet:** intraday price crosses, ETF flows, funding, insider trades (they stay in the Claude task).
+- **First run** stores the current state as a baseline and sends nothing.
+- **Failures:** every run is logged (`runs` table, shown in the Alerts tab). Three failed runs in a row send one "checks are failing" push, so silence never means "no signal" by mistake.
+- **Push:** standard Web Push (VAPID). The key pair is created once in the Worker and kept in D1. On iPhone push works only in the app opened from the Home Screen.
+- **Tests:** `packages/alerts/test/replay.test.ts` replays 27 Oct to 3 Nov 2026 hour by hour and checks the app raises the same alerts as Claude's task did (exits, 200 hold, NAS100 below its EMA200, ES rejected at mid, ETH 4H trigger on the same candles), never repeats an alert, and alerts the ETH 4H trigger at 08:05 UTC (Claude's task: 08:34).
+- **Secret:** `FMP_API_KEY`, set by Marc as a Worker secret in the Cloudflare dashboard.
 
 ## Rules engine: `packages/rules`
 

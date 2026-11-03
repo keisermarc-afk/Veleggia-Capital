@@ -19,6 +19,7 @@
     <nav class="tabs" role="tablist" aria-label="Sections">
       <button role="tab" data-tab="levels" aria-selected="true">Levels</button>
       <button role="tab" data-tab="plan" aria-selected="false">Weekly plan</button>
+      <button role="tab" data-tab="alerts" aria-selected="false">Alerts</button>
       <button role="tab" data-tab="history" aria-selected="false">History</button>
     </nav>
   </header>
@@ -44,6 +45,22 @@
       <div id="plan-sections"></div>
     </section>
 
+    <section id="tab-alerts" class="tab" hidden>
+      <div class="card" id="push-card">
+        <h3>Push alerts <small id="push-state">—</small></h3>
+        <p class="muted" id="push-help">Checking this device…</p>
+        <div class="card-foot">
+          <span class="muted" id="push-msg"></span>
+          <button class="ghost" id="push-test" hidden>Send a test</button>
+          <button class="ghost" id="push-off" hidden>Turn off</button>
+          <button class="primary" id="push-on" hidden>Turn on alerts</button>
+        </div>
+      </div>
+      <p class="muted" id="check-status">—</p>
+      <h2>Recent alerts</h2>
+      <div id="alert-list" class="alist"></div>
+    </section>
+
     <section id="tab-history" class="tab" hidden>
       <h2>Level changes</h2>
       <div id="hist-levels" class="hist"></div>
@@ -51,7 +68,7 @@
       <div id="hist-plans" class="hist"></div>
       <h2>Files for the dashboard</h2>
       <p class="muted">The same files the dashboard reads, while both run side by side.</p>
-      <p><a href="/api/export/range_levels.csv">range_levels.csv</a> · <a href="/api/export/weekly_plan.csv">weekly_plan.csv</a></p>
+      <p><a href="/api/export/range_levels.csv">range_levels.csv</a> · <a href="/api/export/weekly_plan.csv">weekly_plan.csv</a> · <a href="/api/export/alerts.csv">app_alerts.csv</a></p>
     </section>
   </main>
 

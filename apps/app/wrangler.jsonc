@@ -10,6 +10,9 @@
   // The app is reached on its workers.dev address, protected by Cloudflare Access (login) and checked again in the Worker.
   "workers_dev": true,
   "observability": { "enabled": true },
+  // Rule checks: every hour at :05 (crypto daily close 00:05 UTC, each 4H close, ES futures close 21:05/22:05 UTC),
+  // plus 16:20 New York on weekdays for the cash index close (20:20 UTC in summer, 21:20 UTC in winter).
+  "triggers": { "crons": ["5 * * * *", "20 20,21 * * 1-5"] },
   "assets": {
     "directory": "./public",
     "binding": "ASSETS",

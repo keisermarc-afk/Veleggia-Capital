@@ -53,6 +53,7 @@
     document.querySelectorAll('.tab').forEach(s => { s.hidden = s.id !== 'tab-' + tab; });
     try { localStorage.setItem('veleggia.tab', tab); } catch { /* storage may be blocked */ }
     if (tab === 'history') loadHistory();
+    if (tab === 'alerts') loadAlerts();
   }
   tabs.forEach(b => b.addEventListener('click', () => show(b.dataset.tab)));
 
@@ -219,6 +220,82 @@
     banner('Copied into next week. Edit it, then press Save plan.', true);
   });
 
+
+  // ---------- alerts and push ----------
+  const NAME = (a, type) => a === 'SPX' ? (type === 'Range' ? 'ES (S&P)' : 'S&P 500') : a === 'NDX' ? 'NQ (est.)' : a;
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  const b64uToBytes = (s) => { const p = '='.repeat((4 - s.length % 4) % 4); const b = atob((s + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(b, c => c.charCodeAt(0)); };
+
+  async function pushState() {
+    const on = $('#push-on'), off = $('#push-off'), test = $('#push-test'), help = $('#push-help'), st = $('#push-state');
+    [on, off, test].forEach(b => { b.hidden = true; });
+    if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+      st.textContent = 'not available';
+      help.textContent = isIOS && !standalone
+        ? 'On iPhone, alerts work only in the installed app: in Safari tap Share, then "Add to Home Screen", and open Veleggia from that icon.'
+        : 'This browser does not support push alerts.';
+      return;
+    }
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if (sub && Notification.permission === 'granted') {
+      st.textContent = 'on'; st.className = 'ok';
+      help.textContent = 'This device gets an alert within minutes of a closed candle: crypto daily close, every 4H close, the US close and the futures close.';
+      off.hidden = false; test.hidden = false;
+    } else if (Notification.permission === 'denied') {
+      st.textContent = 'blocked'; st.className = 'bad';
+      help.textContent = isIOS ? 'Notifications are blocked. Turn them on in iPhone Settings > Notifications > Veleggia.' : 'Notifications are blocked for this site in the browser settings.';
+    } else {
+      st.textContent = 'off'; st.className = '';
+      help.textContent = 'Turn on alerts to get range and rule signals on this device.';
+      on.hidden = false;
+    }
+  }
+
+  $('#push-on').addEventListener('click', async () => {
+    const msg = $('#push-msg'); msg.textContent = '';
+    try {
+      const perm = await Notification.requestPermission();
+      if (perm !== 'granted') { await pushState(); return; }
+      const { publicKey } = await api('/api/push/key');
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64uToBytes(publicKey) });
+      await api('/api/push/subscribe', { method: 'POST', body: JSON.stringify({ subscription: sub.toJSON() }) });
+      banner('Alerts are on for this device.', true);
+    } catch (e) { banner('Could not turn on alerts: ' + e.message); }
+    await pushState();
+  });
+  $('#push-off').addEventListener('click', async () => {
+    try {
+      const reg = await navigator.serviceWorker.ready; const sub = await reg.pushManager.getSubscription();
+      if (sub) { await api('/api/push/unsubscribe', { method: 'POST', body: JSON.stringify({ endpoint: sub.endpoint }) }); await sub.unsubscribe(); }
+      banner('Alerts are off for this device.', true);
+    } catch (e) { banner(e.message); }
+    await pushState();
+  });
+  $('#push-test').addEventListener('click', async () => {
+    try { const r = await api('/api/push/test', { method: 'POST', body: '{}' }); $('#push-msg').textContent = r.sent ? 'Test sent.' : 'No device got it.'; }
+    catch (e) { banner(e.message); }
+  });
+
+  async function loadAlerts() {
+    pushState().catch(() => {});
+    const list = $('#alert-list'); list.textContent = '';
+    try {
+      const [al, st] = await Promise.all([api('/api/alerts?limit=60'), api('/api/status')]);
+      const last = st.runs[0];
+      const cs = $('#check-status'); cs.textContent = '';
+      if (!st.fmp_key_set) cs.append(mk('span', { class: 'bad', text: 'The FMP key is not set in Cloudflare yet, so no checks run.' }));
+      else if (!last) cs.append(mk('span', { text: 'No check has run yet. The first one runs at the next full hour plus 5 minutes.' }));
+      else cs.append(mk('span', { class: last.ok ? 'ok' : 'bad', text: last.ok ? '● ' : '● ' }), `Last check ${fmtTime(last.at)}: ${last.ok ? 'ok' : 'failed'}${last.error ? ' · ' + last.error : ''} · checks every hour at :05`);
+      al.rows.forEach(a => list.append(mk('div', { class: 'al ' + a.level },
+        mk('div', { class: 'h' }, mk('b', { text: NAME(a.asset, a.type) }), mk('span', { class: 't', text: a.type }), mk('span', { class: 'when', text: a.at })),
+        mk('div', { class: 'm', text: a.message }))));
+      if (!al.rows.length) list.append(mk('div', { class: 'al' }, mk('div', { class: 'm', text: 'No alerts yet. The first check stores the current state; alerts start with the next change.' })));
+    } catch (e) { banner(e.message); }
+  }
+
   // ---------- history ----------
   async function loadHistory() {
     const hl = $('#hist-levels'), hp = $('#hist-plans'); hl.textContent = ''; hp.textContent = '';
@@ -239,7 +316,8 @@
   // ---------- start ----------
   api('/api/me').then(m => { $('#who').textContent = `Signed in as ${m.email} · not investment advice`; }).catch(e => banner(e.message));
   loadLevels(); loadPlan();
-  let start = 'levels'; try { start = localStorage.getItem('veleggia.tab') || 'levels'; } catch { /* ignore */ }
-  show(['levels', 'plan', 'history'].includes(start) ? start : 'levels');
+  let start = new URLSearchParams(location.search).get('tab') || 'levels';
+  if (!new URLSearchParams(location.search).get('tab')) { try { start = localStorage.getItem('veleggia.tab') || 'levels'; } catch { /* ignore */ } }
+  show(['levels', 'plan', 'alerts', 'history'].includes(start) ? start : 'levels');
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
 })();

@@ -106,3 +106,79 @@ export function setupWatch(weekly_plan: PlanRow[], range_watch: RangeWatch[]): S
     return r ? { id: p.id, asset: String(p.asset), level: Number(p.level), close: r.close, day: r.day, dist: Math.round((r.close / Number(p.level) - 1) * 10000) / 10000 } : null;
   }).filter((x): x is SetupWatch => x !== null);
 }
+
+export interface Bar { date: string; o: number; h: number; l: number; c: number; v: number }
+export interface LevelBars { asset: RangeWatch['asset']; RH: number; RL: number; MID: number | null; level: RangeLevel; bars: Bar[] }
+
+/**
+ * Completed daily bars per range asset, in the same terms as rangeWatch (ES bars for the S&P,
+ * the NQ estimate for the Nasdaq). Same code path as rangeWatch's bar building; a test checks
+ * that both give the same last bar at every moment.
+ */
+export function rangeBars(range_levels: RangeLevel[], ohlc_btc: OhlcRow[], ohlc_eth: OhlcRow[], ohlc_es: OhlcRow[], ohlc_qqq: OhlcRow[], ohlc_spx: OhlcRow[], now: Date): LevelBars[] {
+  const SRC: Record<RangeWatch['asset'], [OhlcRow[], boolean]> = { BTC: [ohlc_btc, true], ETH: [ohlc_eth, true], SPX: [ohlc_es, false], NDX: [ohlc_qqq, false] };
+  const todayUTC = utcDay(now);
+  const { nyDay, nyMin } = nyClock(now);
+  const spxC: Record<string, number> = {};
+  (ohlc_spx || []).forEach(x => { const c = Number(x.close); if (c > 0) spxC[String(x.date).slice(0, 10)] = c; });
+  const basisPts = (ohlc_es || []).map(x => { const d = String(x.date).slice(0, 10); return { d, q: Number(x.close) / spxC[d] }; })
+    .filter(p => isFinite(p.q) && p.q > 0.9 && p.q < 1.1).sort((a, b) => a.d < b.d ? -1 : 1);
+  const basisOn = (d: string) => { const p = basisPts.filter(b => b.d <= d).slice(-5).map(b => b.q).sort((a, b) => a - b); return p.length ? p[Math.floor(p.length / 2)] : null; };
+  const out: LevelBars[] = [];
+  (range_levels || []).forEach(lv => {
+    const raw = String(lv.asset || '').trim().toUpperCase().replace(/[\s^\/-]/g, '');
+    const asset = (raw in SRC ? raw : ALIAS[raw]) as RangeWatch['asset'] | undefined;
+    const RH = Number(lv.range_high), RL = Number(lv.range_low);
+    if (!asset || !(RH > RL) || !(RL > 0)) return;
+    const MID = Number(lv.mid) > 0 ? Number(lv.mid) : null;
+    const k = asset === 'NDX' ? Number(lv.proxy_ratio) : 1;
+    if (!(k > 0)) return;
+    const [rows0, crypto] = SRC[asset];
+    let r: Bar[] = (rows0 || []).map(x => {
+      const date = String(x.date).slice(0, 10);
+      const m = k * (asset === 'NDX' ? (basisOn(date) || 1) : 1);
+      return { date, o: Number(x.open) * m, h: Number(x.high) * m, l: Number(x.low) * m, c: Number(x.close) * m, v: Number(x.volume) };
+    }).filter(x => isFinite(x.c)).sort((a, b) => a.date < b.date ? -1 : 1);
+    r = r.filter(x => {
+      if (crypto) return x.date < todayUTC;
+      if (asset === 'SPX') { const wd = new Date(x.date + 'T12:00:00Z').getUTCDay(); return wd !== 0 && wd !== 6 && !(x.date === nyDay && nyMin < 1020); }
+      return !(x.date === nyDay && nyMin < 975);
+    });
+    out.push({ asset, RH, RL, MID, level: lv, bars: r });
+  });
+  return out;
+}
+
+/** One 4H candle built from hourly bars: starts at 00, 04, 08, 12, 16 or 20 UTC. */
+export interface FourHour { start: string; close: number; high: number; low: number }
+
+/** UTC instant (ms) for a New York wall-clock time "yyyy-mm-dd hh:mm:ss" (FMP intraday timestamps are New York time). */
+export function nyToUtcMs(s: string): number {
+  const [d, t = '00:00:00'] = String(s).split(' ');
+  const [Y, M, D] = d.split('-').map(Number), [h, m, sec] = t.split(':').map(Number);
+  const guess = Date.UTC(Y, M - 1, D, h, m, sec || 0);
+  const off = (ms: number) => { const { nyDay, nyMin } = nyClock(new Date(ms)); const [y2, m2, d2] = nyDay.split('-').map(Number); return Date.UTC(y2, m2 - 1, d2, Math.floor(nyMin / 60), nyMin % 60) - Math.floor(ms / 6e4) * 6e4; };
+  let utc = guess - off(guess);
+  utc = guess - off(utc);
+  return utc;
+}
+
+/** Completed 4H candles (oldest first) from FMP hourly bars; a candle counts once its end is in the past. */
+export function fourHourBars(hourly: { date: string; open: number | string; high: number | string; low: number | string; close: number | string }[], now: Date): FourHour[] {
+  const buckets = new Map<number, { t: number; c: number; h: number; l: number }[]>();
+  for (const x of hourly || []) {
+    const t = nyToUtcMs(x.date);
+    if (!isFinite(t)) continue;
+    const start = Math.floor(t / 144e5) * 144e5; // 4h = 14,400,000 ms, aligned to 00 UTC
+    const list = buckets.get(start) || [];
+    list.push({ t, c: Number(x.close), h: Number(x.high), l: Number(x.low) });
+    buckets.set(start, list);
+  }
+  return [...buckets.entries()]
+    .filter(([start]) => start + 144e5 <= now.getTime())
+    .sort((a, b) => a[0] - b[0])
+    .map(([start, list]) => {
+      list.sort((a, b) => a.t - b.t);
+      return { start: new Date(start).toISOString(), close: list[list.length - 1].c, high: Math.max(...list.map(x => x.h)), low: Math.min(...list.map(x => x.l)) };
+    });
+}
