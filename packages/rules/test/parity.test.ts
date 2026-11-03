@@ -6,7 +6,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import vm from 'node:vm';
 import { computeAll, nyClock, utcDay, type RuleInputs } from '../src';
-import { parseCsv } from './csv';
+import { parseCsv } from '../../data/src/csv';
 
 const ROOT = join(__dirname, '..', '..', '..');
 const REF_SRC = readFileSync(join(ROOT, 'reference', 'dashboard-calcs.js'), 'utf8');

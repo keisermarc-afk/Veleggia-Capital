@@ -1,0 +1,31 @@
+{
+  // Veleggia Capital rules app. Secrets (FMP key, VAPID key, later Bybit read-only key) are set with
+  // `wrangler secret put NAME` or in the Cloudflare dashboard, never in this file or the repo.
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "veleggia-app",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "observability": { "enabled": true },
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "veleggia",
+      // Filled in once the D1 database exists in Marc's Cloudflare account (not a secret).
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "vars": {
+    // Cloudflare Access (login). Not secret; filled in after Access is set up.
+    // ALLOWED_EMAILS: optional second check after Access, comma-separated; set it in the Cloudflare dashboard.
+    "ACCESS_TEAM_DOMAIN": "",
+    "ACCESS_AUD": "",
+    "ALLOWED_EMAILS": ""
+  }
+}

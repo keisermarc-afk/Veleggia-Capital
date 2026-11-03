@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#000000">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Veleggia">
+  <title>Veleggia</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+  <header class="top">
+    <span class="brand">VELEGGIA</span>
+    <nav class="tabs" role="tablist" aria-label="Sections">
+      <button role="tab" data-tab="levels" aria-selected="true">Levels</button>
+      <button role="tab" data-tab="plan" aria-selected="false">Weekly plan</button>
+      <button role="tab" data-tab="history" aria-selected="false">History</button>
+    </nav>
+  </header>
+
+  <main>
+    <div class="banner" id="banner" hidden></div>
+
+    <section id="tab-levels" class="tab">
+      <p class="lead">Your range levels. Index levels are futures levels: ES1! for the S&amp;P, NQ1! for the Nasdaq. Saving a level moves its "set on" date to today; a note edit does not.</p>
+      <div class="cards" id="level-cards"></div>
+    </section>
+
+    <section id="tab-plan" class="tab" hidden>
+      <div class="plan-head">
+        <label class="f">Week starting (Monday)<input type="date" id="plan-week-start"></label>
+        <div class="plan-week" id="plan-week">—</div>
+        <div class="plan-actions">
+          <button class="ghost" id="plan-next">Start next week from this plan</button>
+          <button class="primary" id="plan-save">Save plan</button>
+        </div>
+      </div>
+      <p class="muted" id="plan-saved"></p>
+      <div id="plan-sections"></div>
+    </section>
+
+    <section id="tab-history" class="tab" hidden>
+      <h2>Level changes</h2>
+      <div id="hist-levels" class="hist"></div>
+      <h2>Saved plans</h2>
+      <div id="hist-plans" class="hist"></div>
+      <h2>Files for the dashboard</h2>
+      <p class="muted">The same files the dashboard reads, while both run side by side.</p>
+      <p><a href="/api/export/range_levels.csv">range_levels.csv</a> · <a href="/api/export/weekly_plan.csv">weekly_plan.csv</a></p>
+    </section>
+  </main>
+
+  <footer class="foot" id="who">Not investment advice. Your rules, your levels.</footer>
+  <script src="/app.js"></script>
+</body>
+</html>

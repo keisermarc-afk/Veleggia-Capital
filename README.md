@@ -24,10 +24,38 @@ Phone (installed PWA)  ──>  Cloudflare Worker (API + login)  ──>  D1 dat
 
 ## Build order
 
-1. **Rules engine and parity tests** (this commit): `packages/rules`.
-2. API and the editing screens for range levels and the weekly plan.
+1. **Rules engine and parity tests** (done): `packages/rules`.
+2. **API and the editing screens** for range levels and the weekly plan (done, waiting for the Cloudflare setup below): `apps/app`, `packages/data`.
 3. Scheduled checks and push alerts.
 4. Parallel run next to the dashboard (about 2 weeks). Cutover only with zero rule-state mismatches and every dashboard alert matched by an app alert.
+
+## The app: `apps/app`
+
+A Cloudflare Worker (Hono) with a D1 database and the screens in `apps/app/public` (plain HTML/JS, installable as a PWA).
+
+- **Levels:** one card per market (BTC, ETH, ES, NQ) with range high, mid, low, watch levels, 4H long trigger, note, and the NQ ratio. Numbers can be typed as `87300`, `87,300` or `87'300`. "Set on" moves to today only when a level changes, not for a note edit.
+- **Weekly plan:** headline, long setups (market, trigger, stop, target, risk class, trigger level), exits, shorts, rules, event risk. Each row folds to one line. "Start next week from this plan" copies it to the following Monday.
+- **History:** every save of levels and plans is kept.
+- **Files for the dashboard:** `/api/export/range_levels.csv` and `/api/export/weekly_plan.csv` are byte-for-byte the dashboard's file format, for the parallel run.
+- **Login:** Cloudflare Access in front of the Worker. The Worker also verifies the Access token itself (`apps/app/src/auth.ts`) and refuses everything while Access is not configured. Writes must come from the app's own page.
+- **Data rules** (`packages/data`): validation and CSV format shared by the server and the tests. The tests round-trip the dashboard's current files unchanged.
+
+Local development:
+```
+cd apps/app
+echo DEV_AUTH_BYPASS=local-dev-only > .dev.vars   # localhost only, never deployed
+npx wrangler d1 migrations apply veleggia --local
+npx wrangler dev
+```
+
+## Cloudflare setup (one time, done by Marc)
+
+1. **D1 database:** Cloudflare dashboard > Storage & Databases > D1 > Create, name `veleggia`. The database ID goes into `apps/app/wrangler.jsonc` (not secret).
+2. **GitHub secrets** (repo Settings > Secrets and variables > Actions):
+   - `CLOUDFLARE_ACCOUNT_ID`: from the Cloudflare dashboard (Workers & Pages overview).
+   - `CLOUDFLARE_API_TOKEN`: Account API tokens > Create token > template "Edit Cloudflare Workers", add the permission Account > D1 > Edit, limit it to this account.
+3. Every push to `main` then runs the tests and, only if they pass, applies the database migrations and deploys (`.github/workflows/ci.yml`).
+4. **Login:** in Workers & Pages > veleggia-app > Access, "Protect this Worker behind Access", All traffic, a policy allowing only Marc's email. Then put the team domain (`<team>.cloudflareaccess.com`) and the application's AUD tag into `ACCESS_TEAM_DOMAIN` and `ACCESS_AUD` in `wrangler.jsonc` (not secret).
 
 ## Rules engine: `packages/rules`
 

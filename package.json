@@ -2,11 +2,12 @@
   "name": "veleggia-capital",
   "private": true,
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "apps/*"
   ],
   "scripts": {
     "test": "vitest run",
-    "typecheck": "tsc -p packages/rules --noEmit"
+    "typecheck": "tsc -p packages/rules --noEmit && tsc -p apps/app --noEmit"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
