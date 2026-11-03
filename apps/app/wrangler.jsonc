@@ -7,6 +7,8 @@
   "account_id": "c4ad492baa9588736c3521811736ae6f",
   "main": "src/index.ts",
   "compatibility_date": "2026-10-01",
+  // The app is reached on its workers.dev address, protected by Cloudflare Access (login) and checked again in the Worker.
+  "workers_dev": true,
   "observability": { "enabled": true },
   "assets": {
     "directory": "./public",
