@@ -1,0 +1,5 @@
+asset,range_high,mid,range_low,set_on,note,proxy_ratio,watch_levels,long_trigger_4h
+BTC,87300,81000,75000,2026-11-01,Mid is key,,,
+ETH,2780,2528,2350,2026-11-01,Range intact but price below it. Watch 2178 and 1985. Long idea: 2 4H closes above 2280,,2178;1985,2280
+SPX,7895,7620.25,7329.25,2026-11-01,ES1! futures levels (read from ESUSD),,,
+NDX,31000,29400,28200,2026-10-25,NQ1! levels; NQ estimated from QQQ x 41.10 x ES premium,41.10,,

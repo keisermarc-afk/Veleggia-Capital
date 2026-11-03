@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.wrangler/
+# Secrets never go in the repo. Local dev secrets live in .dev.vars (Cloudflare) or .env.
+.dev.vars
+.env
+.env.*
+*.pem
+*.key

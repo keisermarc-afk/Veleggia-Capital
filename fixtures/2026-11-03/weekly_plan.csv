@@ -1,0 +1,16 @@
+id,week,week_start,week_end,written,section,asset,market,title,trigger,stop,target,risk_class,level,note
+h1,Week 45,2026-11-02,2026-11-08,2026-11-01,headline,,,"The Fed held, tech broke on Friday and crypto fell with the reported Binance hack. All four markets sit below their mid or below their range, with nothing open under your rules: wait for a reclaim of the mid or a test of the range low.",,,,,,
+x1,Week 45,2026-11-02,2026-11-08,2026-11-01,exit,NDX,NQ,Exit rule hit 30 Oct,,,,,,"Two closes below the EMA50 in Uptrend weak, the dangerous state in your test: 28% chance of a 12% drop within 60 days."
+x2,Week 45,2026-11-02,2026-11-08,2026-11-01,exit,BTC,BTC,Exit rule hit 30 Oct,,,,,,"Two closes below the EMA50 in Uptrend intact, the mild case in your test: typical +4.9% over 60 days."
+x3,Week 45,2026-11-02,2026-11-08,2026-11-01,exit,SPX,ES,Monday's close decides,,,,,,"A second cash close below 7,683 (7,718 on ES) triggers the exit."
+l1,Week 45,2026-11-02,2026-11-08,2026-11-01,long,NDX,NQ (est.),Range low sweep,"4H sweep of 28,200 that closes back above",Below the sweep,"Mid 29,400 (+3 to 4%)",Setup Only (Uptrend weak),28200,"Range low and EMA200 meet here, so this is the cleanest zone."
+l2,Week 45,2026-11-02,2026-11-08,2026-11-01,long,SPX,ES (S&P),Mid reclaim,"Two closes back above 7,620 (mid and EMA100)",Below the reclaim low,"Range high 7,895 (+3.6%)",Normal,7620.25,"Mid and daily EMA100 sit on the same line, the key level overhead."
+l3,Week 45,2026-11-02,2026-11-08,2026-11-01,long,SPX,ES (S&P),Range low sweep,"Sweep of 7,329 that closes back above",Below the sweep,"Mid 7,620 (+4%)",Probably Setup Only,7329.25,"The EMA200 (7,383 fut.) would break on the way down."
+l4,Week 45,2026-11-02,2026-11-08,2026-11-01,long,BTC,BTC,Range low sweep,"4H sweep of 75,000 that closes back above",1.5 to 2% below,"Mid 81,000 (+8%, about 4 to 5R)",Probably Setup Only,75000,"The range low sits below the EMA200 (76,425): two closes below it turn the macro cycle to Uptrend weak first."
+l5,Week 45,2026-11-02,2026-11-08,2026-11-01,long,ETH,ETH,Reclaim,"Two 4H closes above 2,280","About 2,235 (tight) or 2,165 (wide)","2,350 first, then mid 2,528 (about 4.8R or 2.3R)","Setup Only, counter-trend",2280,"Overhead: EMA200 2,316 and range low 2,350."
+s1,Week 45,2026-11-02,2026-11-08,2026-11-01,short,,,None qualify,,,,,,"No market has an exhaustion top with a distribution range, and range-high shorts on the indices lost in every test. Lost mid is not a short trigger under your rules."
+r1,Week 45,2026-11-02,2026-11-08,2026-11-01,rule,,,No front-running. A touch of a zone is not a trigger.,,,,,,
+r2,Week 45,2026-11-02,2026-11-08,2026-11-01,rule,,,All long setups are lower conviction this week because of the event risk.,,,,,,
+e1,Week 45,2026-11-02,2026-11-08,2026-11-01,risk,,,"Tue 3 Nov: US midterms, results overnight",,,,,,
+e2,Week 45,2026-11-02,2026-11-08,2026-11-01,risk,,,Fri 6 Nov: Nonfarm payrolls 14:30 Zurich,,,,,,
+e3,Week 45,2026-11-02,2026-11-08,2026-11-01,risk,,,Action item: write down your risk stance for Tuesday night and Friday before Monday's open. The NQ setup and the ES mid reclaim sit in this window.,,,,,,
