@@ -16,8 +16,8 @@
     {
       "binding": "DB",
       "database_name": "veleggia",
-      // Filled in once the D1 database exists in Marc's Cloudflare account (not a secret).
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      // D1 database "veleggia" in Marc's Cloudflare account (the id is not a secret).
+      "database_id": "4ee4fa3d-0b2a-4605-9eed-628833287851",
       "migrations_dir": "migrations"
     }
   ],
