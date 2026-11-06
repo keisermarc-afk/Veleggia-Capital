@@ -4,7 +4,8 @@
 //
 // Covered: 1 regime confirmed, 1b early signal, 2 crypto EMA50/EMA200 close side + trend exit,
 // 4 index EMA200 state, 4a index EMA50/EMA100 close side + trend exit, 4b weekly trend,
-// 4d macro cycle, 4e 200 hold rule, 4f range signals, 4g watch levels and the 4H long trigger.
+// 4d macro cycle, 4e 200 hold rule, 4f range signals, 4g watch levels and the 4H long trigger,
+// plus the 4H sweep and reclaim of the range low, range high and watch levels (crypto, added 6 Nov 2026).
 // Not covered here (stay in the Claude task): 3 and 4c intraday price checks, 5 ETF flows,
 // 6 funding, 6b insider trades.
 import {
@@ -35,6 +36,12 @@ const RANGE_NAME: Record<string, string> = { BTC: 'BTC', ETH: 'ETH', SPX: 'ES (S
 const dec = (asset: string) => asset === 'BTC' || asset === 'NAS100' || asset === 'NDX' ? 0 : 2;
 const n = (v: number, d: number) => v.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
 const pct = (x: number) => (x >= 0 ? '+' : '') + (x * 100).toFixed(1) + '%';
+/** "13:00–17:00 Zurich" for a 4H candle start (ISO, UTC). */
+const zurichSpan = (iso: string) => {
+  const f = (ms: number) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Zurich', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(ms));
+  const t = Date.parse(iso);
+  return `${new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Zurich', day: '2-digit', month: 'short' }).format(new Date(t))} ${f(t)}–${f(t + 144e5)} Zurich`;
+};
 const side = (dist: number) => dist >= 0 ? 'above' : 'below';
 const MAX_SEEN = 120;
 
@@ -155,8 +162,35 @@ export function runEngine(prev: AlertState | null, inp: EngineInput, now: Date):
         }
       }
     }
-    const trig = Number(lb.level.long_trigger_4h);
     const hourly = inp.hourly?.[a];
+    // 4H sweep and reclaim (added 6 Nov 2026): a completed 4H candle trades through the range low, the range
+    // high or a watch level and closes back on the other side. Checks the last two completed candles, so a
+    // missed hourly run is caught on the next one; each candle and level alerts once.
+    if (hourly?.length && (a === 'BTC' || a === 'ETH')) {
+      const fh = fourHourBars(hourly, now);
+      const m = macroOf(a);
+      const levels: { lv: number; what: string; below: boolean; above: boolean }[] = [
+        { lv: lb.RL, what: 'your range low', below: true, above: false },
+        { lv: lb.RH, what: 'your range high', below: false, above: true },
+        ...watch.map(w => ({ lv: w, what: 'your watch level', below: true, above: true })),
+      ];
+      for (const c of fh.slice(-2)) {
+        const when = zurichSpan(c.start);
+        for (const L of levels) {
+          if (L.below && c.low < L.lv && c.close > L.lv) {
+            const id = `${a}|sweep4h|${L.lv}|low|${c.start}`;
+            if (mark(id)) push({ key: id, asset: a, type: '4H sweep', level: 'good',
+              message: `${name}: 4H sweep of ${L.what} ${n(L.lv, d)} and close back above (${when} candle: low ${n(c.low, d)}, close ${n(c.close, d)}). This is the sweep-and-reclaim long trigger.${m.cycle !== 'Uptrend intact' ? ` Macro cycle is ${m.cycle}, so a long is Setup Only risk.` : ''}` });
+          }
+          if (L.above && c.high > L.lv && c.close < L.lv) {
+            const id = `${a}|sweep4h|${L.lv}|high|${c.start}`;
+            if (mark(id)) push({ key: id, asset: a, type: '4H sweep', level: 'warn',
+              message: `${name}: 4H sweep of ${L.what} ${n(L.lv, d)} and close back below (${when} candle: high ${n(c.high, d)}, close ${n(c.close, d)}). Failed push above the level.` });
+          }
+        }
+      }
+    }
+    const trig = Number(lb.level.long_trigger_4h);
     if (trig > 0 && hourly?.length) {
       const fh = fourHourBars(hourly, now);
       const k = fh.length - 1;
