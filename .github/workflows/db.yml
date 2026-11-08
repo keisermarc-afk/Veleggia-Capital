@@ -1,0 +1,50 @@
+name: Database read / apply
+
+# Manual only. "read" prints the current range levels, the latest level saves and the weekly plan
+# from the live D1 database. "apply" runs one SQL file from ops/ (committed and reviewed in git),
+# used by Claude to load a weekly plan written in chat into the app.
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: read or apply
+        required: true
+        default: read
+      sql_file:
+        description: for apply, a file in ops/ (for example ops/plan_2026-W46.sql)
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  db:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    defaults:
+      run:
+        working-directory: apps/app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+        working-directory: .
+      - name: Apply SQL file
+        if: inputs.action == 'apply'
+        run: |
+          case "${{ inputs.sql_file }}" in ops/*.sql) ;; *) echo "sql_file must be in ops/"; exit 1;; esac
+          npx wrangler d1 execute veleggia --remote --yes --file "../../${{ inputs.sql_file }}"
+      - name: Read
+        run: |
+          q() { echo "=== $1"; npx wrangler d1 execute veleggia --remote --json --command "$2" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.stringify(JSON.parse(s)[0].results)))'; }
+          q range_levels "SELECT * FROM range_levels ORDER BY asset"
+          q range_levels_history "SELECT id, asset, saved_at, saved_by, data FROM range_levels_history ORDER BY id DESC LIMIT 12"
+          q weekly_plan "SELECT * FROM weekly_plan ORDER BY pos"
+          q weekly_plan_history "SELECT id, week, saved_at, saved_by FROM weekly_plan_history ORDER BY id DESC LIMIT 5"
+          q runs "SELECT * FROM runs ORDER BY id DESC LIMIT 5"
+          q alerts "SELECT at, key, type, level FROM alerts ORDER BY id DESC LIMIT 15"
