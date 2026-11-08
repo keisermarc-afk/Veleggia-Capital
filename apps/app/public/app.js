@@ -64,6 +64,11 @@
     const wrap = mk('label', { class: 'f' }, label, input, opts.hint ? mk('span', { class: 'hint', text: opts.hint }) : null, mk('span', { class: 'msg' }));
     return wrap;
   }
+  function tfField(value) {
+    const sel = mk('select', { name: 'trigger_tf' });
+    for (const [v, t] of [['', '4H closes'], ['1H', '1H closes']]) { const o = mk('option', { value: v, text: t }); if ((value || '') === v) o.selected = true; sel.append(o); }
+    return mk('label', { class: 'f' }, 'Timeframe', sel, mk('span', { class: 'msg' }));
+  }
   function showErrors(container, errors, map = (f) => f) {
     container.querySelectorAll('.f').forEach(f => { f.classList.remove('err'); $('.msg', f).textContent = ''; });
     for (const e of errors) {
@@ -89,7 +94,11 @@
         field('Mid', 'mid', r.mid, { numeric: true, hint: 'Empty = no mid' }),
         field('Range low', 'range_low', r.range_low, { numeric: true })),
       field('Watch levels', 'watch_levels', (r.watch_levels || '').split(';').filter(Boolean).join('; '), { hint: 'Separate with ;', placeholder: 'e.g. 2178; 1985' }),
-      field('4H long trigger', 'long_trigger_4h', r.long_trigger_4h, { numeric: true, hint: 'Two 4H closes above it' }),
+      a.id === 'BTC' || a.id === 'ETH'
+        ? mk('div', { class: 'row3' },
+            field('Long trigger', 'long_trigger_4h', r.long_trigger_4h, { numeric: true, hint: 'Two closes above it' }),
+            tfField(r.trigger_tf))
+        : field('Long trigger', 'long_trigger_4h', r.long_trigger_4h, { numeric: true, hint: 'Two 4H closes above it (alerts on the daily close back above)' }),
       a.id === 'NDX' ? field('NQ ratio (NQ points per QQQ dollar)', 'proxy_ratio', r.proxy_ratio, { numeric: true, hint: 'Recalibrate every couple of months' }) : null,
       field('Note', 'note', r.note, { textarea: true }),
     ].filter(Boolean).forEach(x => form.append(x));
@@ -304,7 +313,7 @@
       lv.rows.forEach(h => {
         const d = h.data; const a = ASSETS.find(x => x.id === h.asset);
         hl.append(mk('div', { class: 'h' }, mk('b', { text: a ? a.label : h.asset }),
-          mk('span', { text: `${d.range_low} / ${d.mid || 'no mid'} / ${d.range_high}${d.watch_levels ? ' · watch ' + d.watch_levels.split(';').join(', ') : ''}${d.long_trigger_4h ? ' · 4H trigger ' + d.long_trigger_4h : ''}` }),
+          mk('span', { text: `${d.range_low} / ${d.mid || 'no mid'} / ${d.range_high}${d.watch_levels ? ' · watch ' + d.watch_levels.split(';').join(', ') : ''}${d.long_trigger_4h ? ' · ' + (d.trigger_tf || '4H') + ' trigger ' + d.long_trigger_4h : ''}` }),
           mk('span', { class: 'when', text: `${fmtTime(h.saved_at)} · ${h.saved_by}` })));
       });
       pl.rows.forEach(h => hp.append(mk('div', { class: 'h' }, mk('b', { text: h.week.split(' (')[0] }), mk('span', { text: `${h.rows} rows` }), mk('span', { class: 'when', text: `${fmtTime(h.saved_at)} · ${h.saved_by}` }))));

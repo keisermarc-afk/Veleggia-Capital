@@ -78,3 +78,21 @@ describe('Index trigger level: daily close back above', () => {
     expect(r2.alerts.filter(a => a.key.startsWith('NDX|reclaim1d'))).toEqual([]);
   });
 });
+
+describe('1H trigger timeframe', () => {
+  it('alerts ETH two 1H closes above 2,255 when trigger_tf is 1H, and not with the default 4H', () => {
+    const lv = (tf: string) => (base.range_levels as never as Record<string, string>[]).map(l => l.asset === 'ETH' ? { ...l, long_trigger_4h: '2255', trigger_tf: tf } : l);
+    // NY 09:00-12:00 on 9 Nov = 14:00-17:00 UTC: closes 2240, 2258, 2262.
+    const bars = [['09', 2240], ['10', 2258], ['11', 2262]].map(([h, c]) => ({ date: `2026-11-09 ${h}:00:00`, open: 2245, high: 2265, low: 2235, close: c }));
+    const t0 = new Date('2026-11-09T14:05:00Z'), t1 = new Date('2026-11-09T17:05:00Z');
+    const run = (tf: string) => {
+      const inp = (rows: unknown[]) => ({ ...base, range_levels: lv(tf) as never, hourly: { ETH: rows as never } });
+      const s0 = runEngine(null, inp([]), t0).state;
+      return runEngine(s0, inp(bars), t1).alerts.filter(a => a.key.startsWith('ETH|trigger'));
+    };
+    const one = run('1H');
+    expect(one.map(a => a.key)).toEqual(['ETH|trigger1h|2255|2|2026-11-09T16:00:00.000Z']);
+    expect(one[0].message).toContain('two 1H closes above 2,255');
+    expect(run('')).toEqual([]); // 4H: only one completed 4H candle, so no trigger yet
+  });
+});

@@ -1,5 +1,5 @@
-asset,range_high,mid,range_low,set_on,note,proxy_ratio,watch_levels,long_trigger_4h
-BTC,87300,81000,75000,2026-11-08,Range low is key. Might sweep again.,,,75000
-ETH,2780,2528,2350,2026-11-08,"Price needs to reclaim monthly open at 2255, 2 one hr closes above is a long trigger. Then reclaim range low at 2350 to compound. Target yearly open at 3k.",,2178;1985,2255
-SPX,7895,7620.25,7329.25,2026-11-08,Needs to hold range low or sweep it. Otherwise 7045 comes into play,,7045,
-NDX,31000,29000,27220,2026-11-08,Range low reclaim or downside levels for bounce,41.10,26393;25455,27220
+asset,range_high,mid,range_low,set_on,note,proxy_ratio,watch_levels,long_trigger_4h,trigger_tf
+BTC,87300,81000,75000,2026-11-08,Range low is key. Might sweep again.,,,75000,
+ETH,2780,2528,2350,2026-11-08,"Price needs to reclaim monthly open at 2255, 2 one hr closes above is a long trigger. Then reclaim range low at 2350 to compound. Target yearly open at 3k.",,2178;1985,2255,1H
+SPX,7895,7620.25,7329.25,2026-11-08,Needs to hold range low or sweep it. Otherwise 7045 comes into play,,7045,,
+NDX,31000,29000,27220,2026-11-08,Range low reclaim or downside levels for bounce,41.10,26393;25455,27220,

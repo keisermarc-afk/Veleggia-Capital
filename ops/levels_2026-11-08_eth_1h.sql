@@ -1,0 +1,3 @@
+-- 8 Nov 2026: Marc asked for the ETH long trigger (2,255) to alert on two 1H closes, as in his note.
+UPDATE range_levels SET trigger_tf = '1H', updated_at = '2026-11-08T19:30:00Z', updated_by = 'Claude (Marc asked in chat)' WHERE asset = 'ETH';
+INSERT INTO range_levels_history (asset, data, saved_at, saved_by) VALUES ('ETH', '{"asset": "ETH", "range_high": "2780", "mid": "2528", "range_low": "2350", "set_on": "2026-11-08", "note": "Price needs to reclaim monthly open at 2255, 2 one hr closes above is a long trigger. Then reclaim range low at 2350 to compound. Target yearly open at 3k.", "proxy_ratio": "", "watch_levels": "2178;1985", "long_trigger_4h": "2255", "trigger_tf": "1H"}', '2026-11-08T19:30:00Z', 'Claude (Marc asked in chat)');

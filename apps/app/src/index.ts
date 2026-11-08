@@ -38,10 +38,10 @@ app.put('/api/levels/:asset', async c => {
   if (!v.ok) return c.json({ error: 'Some fields need fixing.', errors: v.errors }, 422);
   const r = v.row, at = nowIso(), by = c.get('email');
   await c.env.DB.batch([
-    c.env.DB.prepare(`INSERT INTO range_levels (asset, range_high, mid, range_low, set_on, note, proxy_ratio, watch_levels, long_trigger_4h, updated_at, updated_by)
-      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
-      ON CONFLICT(asset) DO UPDATE SET range_high = ?2, mid = ?3, range_low = ?4, set_on = ?5, note = ?6, proxy_ratio = ?7, watch_levels = ?8, long_trigger_4h = ?9, updated_at = ?10, updated_by = ?11`)
-      .bind(r.asset, r.range_high, r.mid, r.range_low, r.set_on, r.note, r.proxy_ratio, r.watch_levels, r.long_trigger_4h, at, by),
+    c.env.DB.prepare(`INSERT INTO range_levels (asset, range_high, mid, range_low, set_on, note, proxy_ratio, watch_levels, long_trigger_4h, updated_at, updated_by, trigger_tf)
+      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)
+      ON CONFLICT(asset) DO UPDATE SET range_high = ?2, mid = ?3, range_low = ?4, set_on = ?5, note = ?6, proxy_ratio = ?7, watch_levels = ?8, long_trigger_4h = ?9, updated_at = ?10, updated_by = ?11, trigger_tf = ?12`)
+      .bind(r.asset, r.range_high, r.mid, r.range_low, r.set_on, r.note, r.proxy_ratio, r.watch_levels, r.long_trigger_4h, at, by, r.trigger_tf),
     c.env.DB.prepare('INSERT INTO range_levels_history (asset, data, saved_at, saved_by) VALUES (?, ?, ?, ?)').bind(r.asset, JSON.stringify(r), at, by),
   ]);
   return c.json({ row: { ...r, updated_at: at, updated_by: by } });

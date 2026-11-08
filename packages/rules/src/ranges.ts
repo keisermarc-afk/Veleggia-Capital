@@ -4,7 +4,7 @@ import { nyClock, utcDay, type OhlcRow } from './util';
 export interface RangeLevel {
   asset: string; range_high: number | string; mid?: number | string | null; range_low: number | string;
   set_on?: string; note?: string; proxy_ratio?: number | string | null;
-  watch_levels?: string; long_trigger_4h?: number | string | null;
+  watch_levels?: string; long_trigger_4h?: number | string | null; trigger_tf?: string;
 }
 
 export type SignalKind = 'short' | 'long' | 'up' | 'down' | 'target' | 'watch' | 'none';
@@ -165,17 +165,26 @@ export function nyToUtcMs(s: string): number {
 
 /** Completed 4H candles (oldest first) from FMP hourly bars; a candle counts once its end is in the past. */
 export function fourHourBars(hourly: { date: string; open: number | string; high: number | string; low: number | string; close: number | string }[], now: Date): FourHour[] {
+  return barsOf(hourly, now, 144e5);
+}
+
+/** Completed 1H candles from the same FMP hourly bars (for a 1H trigger, added 8 Nov 2026). */
+export function oneHourBars(hourly: { date: string; open: number | string; high: number | string; low: number | string; close: number | string }[], now: Date): FourHour[] {
+  return barsOf(hourly, now, 36e5);
+}
+
+function barsOf(hourly: { date: string; open: number | string; high: number | string; low: number | string; close: number | string }[], now: Date, span: number): FourHour[] {
   const buckets = new Map<number, { t: number; c: number; h: number; l: number }[]>();
   for (const x of hourly || []) {
     const t = nyToUtcMs(x.date);
     if (!isFinite(t)) continue;
-    const start = Math.floor(t / 144e5) * 144e5; // 4h = 14,400,000 ms, aligned to 00 UTC
+    const start = Math.floor(t / span) * span; // 4h = 14,400,000 ms (1h = 3,600,000), aligned to 00 UTC
     const list = buckets.get(start) || [];
     list.push({ t, c: Number(x.close), h: Number(x.high), l: Number(x.low) });
     buckets.set(start, list);
   }
   return [...buckets.entries()]
-    .filter(([start]) => start + 144e5 <= now.getTime())
+    .filter(([start]) => start + span <= now.getTime())
     .sort((a, b) => a[0] - b[0])
     .map(([start, list]) => {
       list.sort((a, b) => a.t - b.t);

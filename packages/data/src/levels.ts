@@ -7,7 +7,7 @@ export type Asset = (typeof ASSETS)[number];
 /** How each asset is shown to Marc: index levels are futures levels (ES1!, NQ1!). */
 export const ASSET_LABEL: Record<Asset, string> = { BTC: 'BTC', ETH: 'ETH', SPX: 'ES (S&P)', NDX: 'NQ (est.)' };
 
-export const LEVEL_COLUMNS = ['asset', 'range_high', 'mid', 'range_low', 'set_on', 'note', 'proxy_ratio', 'watch_levels', 'long_trigger_4h'] as const;
+export const LEVEL_COLUMNS = ['asset', 'range_high', 'mid', 'range_low', 'set_on', 'note', 'proxy_ratio', 'watch_levels', 'long_trigger_4h', 'trigger_tf'] as const;
 export type LevelRow = Record<(typeof LEVEL_COLUMNS)[number], string>;
 
 export interface FieldError { field: string; message: string }
@@ -28,7 +28,7 @@ export function normNumber(raw: unknown): string | null {
 const isDate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s) && !isNaN(Date.parse(s + 'T00:00:00Z'));
 
 /** The fields that count as "the levels changed" (a note edit does not move set_on). */
-const LEVEL_FIELDS = ['range_high', 'mid', 'range_low', 'watch_levels', 'long_trigger_4h', 'proxy_ratio'] as const;
+const LEVEL_FIELDS = ['range_high', 'mid', 'range_low', 'watch_levels', 'long_trigger_4h', 'trigger_tf', 'proxy_ratio'] as const;
 
 /**
  * Validate one asset's levels. `previous` is the stored row (if any): set_on moves to `today`
@@ -50,7 +50,12 @@ export function validateLevel(input: Record<string, unknown>, today: string, pre
   const range_high = num('range_high', 'Range high', true);
   const range_low = num('range_low', 'Range low', true);
   const mid = num('mid', 'Mid', false);
-  const long_trigger_4h = num('long_trigger_4h', '4H long trigger', false);
+  const long_trigger_4h = num('long_trigger_4h', 'Long trigger', false);
+  // Trigger timeframe (added 8 Nov 2026): '' = 4H (default), '1H' = two 1H closes. 1H only for crypto (no index intraday data).
+  let trigger_tf = String(input.trigger_tf ?? '').trim().toUpperCase();
+  if (trigger_tf === '4H') trigger_tf = '';
+  if (trigger_tf !== '' && trigger_tf !== '1H') errors.push({ field: 'trigger_tf', message: 'Trigger timeframe must be 4H or 1H.' });
+  if (asset === 'SPX' || asset === 'NDX' || !long_trigger_4h) trigger_tf = '';
   let proxy_ratio = num('proxy_ratio', 'NQ ratio', asset === 'NDX');
   if (asset !== 'NDX') proxy_ratio = '';
 
@@ -68,8 +73,8 @@ export function validateLevel(input: Record<string, unknown>, today: string, pre
   if (note.length > 300) errors.push({ field: 'note', message: 'Note is longer than 300 characters.' });
 
   if (errors.length) return { ok: false, errors };
-  const row: LevelRow = { asset, range_high, mid, range_low, set_on: today, note, proxy_ratio, watch_levels: watch.join(';'), long_trigger_4h };
-  if (previous && LEVEL_FIELDS.every(f => previous[f] === row[f]) && isDate(previous.set_on)) row.set_on = previous.set_on;
+  const row: LevelRow = { asset, range_high, mid, range_low, set_on: today, note, proxy_ratio, watch_levels: watch.join(';'), long_trigger_4h, trigger_tf };
+  if (previous && LEVEL_FIELDS.every(f => (previous[f] ?? '') === row[f]) && isDate(previous.set_on)) row.set_on = previous.set_on;
   return { ok: true, row };
 }
 

@@ -1,6 +1,6 @@
 // Service worker: makes the app installable and loads the app shell fast.
 // API calls always go to the network (levels and plans must never be stale).
-const CACHE = 'veleggia-shell-v2';
+const CACHE = 'veleggia-shell-v3';
 const SHELL = ['/', '/index.html', '/app.css', '/app.js', '/manifest.webmanifest', '/icons/icon-192.png'];
 
 self.addEventListener('install', (e) => {

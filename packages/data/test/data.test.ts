@@ -26,7 +26,17 @@ describe('range levels', () => {
 
   it('round-trips the dashboard file unchanged (same rows, same set_on dates)', () => {
     const out = rows.map(r => { const v = validateLevel(r, '2026-11-03', r); if (!v.ok) throw new Error(JSON.stringify(v.errors)); return v.row; });
-    expect(parseCsv(toCsv(LEVEL_COLUMNS, out))).toEqual(rows);
+    // Files written before 8 Nov 2026 have no trigger_tf column; it comes back empty (= 4H).
+    expect(parseCsv(toCsv(LEVEL_COLUMNS, out))).toEqual(rows.map(r => ({ trigger_tf: '', ...r })));
+  });
+
+  it('keeps a 1H trigger timeframe for crypto only', () => {
+    const eth = rows.find(r => r.asset === 'ETH')!, spx = rows.find(r => r.asset === 'SPX')!;
+    const e = validateLevel({ ...eth, long_trigger_4h: '2255', trigger_tf: '1h' }, '2026-11-08', eth);
+    expect(e.ok && [e.row.trigger_tf, e.row.set_on]).toEqual(['1H', '2026-11-08']);
+    const s = validateLevel({ ...spx, long_trigger_4h: '7400', trigger_tf: '1H' }, '2026-11-08', spx);
+    expect(s.ok && s.row.trigger_tf).toBe('');
+    expect(validateLevel({ ...eth, long_trigger_4h: '2255', trigger_tf: '15m' }, '2026-11-08', eth).ok).toBe(false);
   });
 
   it('moves set_on only when a level changes, not for a note edit', () => {

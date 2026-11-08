@@ -9,7 +9,7 @@
 // Not covered here (stay in the Claude task): 3 and 4c intraday price checks, 5 ETF flows,
 // 6 funding, 6b insider trades.
 import {
-  computeAll, rangeBars, fourHourBars,
+  computeAll, rangeBars, fourHourBars, oneHourBars,
   type RuleInputs, type CryptoTrend, type EquityHealth, type EquityWeekly, type MacroCycle, type RangeWatch,
 } from '../../rules/src';
 
@@ -202,26 +202,28 @@ export function runEngine(prev: AlertState | null, inp: EngineInput, now: Date):
           message: `${name}: daily close back above your ${n(trig, d)} trigger level on ${last.date} (close ${n(last.c, d)}, previous ${n(prevBar.c, d)}). The 4H closes can't be checked on futures here, so confirm them on your chart.${near}` });
       }
     }
+    // Trigger timeframe: two 4H closes by default, two 1H closes when Marc set trigger_tf = 1H (crypto only).
+    const tf = String((lb.level as { trigger_tf?: string }).trigger_tf || '').toUpperCase() === '1H' ? '1H' : '4H';
     if (trig > 0 && hourly?.length) {
-      const fh = fourHourBars(hourly, now);
+      const fh = tf === '1H' ? oneHourBars(hourly, now) : fourHourBars(hourly, now);
       const k = fh.length - 1;
       if (k >= 2) {
         const above = (i: number) => fh[i].close > trig;
         const t = (iso: string) => iso.slice(11, 16) + ' UTC';
         if (above(k) && above(k - 1) && !above(k - 2)) {
-          const id = `${a}|trigger4h|${trig}|2|${fh[k].start}`;
+          const id = `${a}|trigger${tf.toLowerCase()}|${trig}|2|${fh[k].start}`;
           if (mark(id)) {
             const m = macroOf(a), ct = (rules.crypto_trend as CryptoTrend[]).find(x => x.asset === a);
             const over: string[] = [];
             if (ct && fh[k].close < ct.ema200) over.push(`daily EMA200 ${n(ct.ema200, d)}`);
             if (fh[k].close < lb.RL) over.push(`range low ${n(lb.RL, d)}`);
             push({ key: id, asset: a, type: 'Range', level: 'good',
-              message: `${name}: two 4H closes above ${n(trig, d)}, your long trigger is met (${t(fh[k - 1].start)} bar ${n(fh[k - 1].close, d)}, ${t(fh[k].start)} bar ${n(fh[k].close, d)}).${over.length ? ' Next overhead: ' + over.join(', ') + '.' : ''}${m.cycle !== 'Uptrend intact' ? ` Macro cycle is ${m.cycle}, so a long is Setup Only risk.` : ''}` });
+              message: `${name}: two ${tf} closes above ${n(trig, d)}, your long trigger is met (${t(fh[k - 1].start)} bar ${n(fh[k - 1].close, d)}, ${t(fh[k].start)} bar ${n(fh[k].close, d)}).${over.length ? ' Next overhead: ' + over.join(', ') + '.' : ''}${m.cycle !== 'Uptrend intact' ? ` Macro cycle is ${m.cycle}, so a long is Setup Only risk.` : ''}` });
           }
         } else if (above(k) && !above(k - 1)) {
-          const id = `${a}|trigger4h|${trig}|1|${fh[k].start}`;
+          const id = `${a}|trigger${tf.toLowerCase()}|${trig}|1|${fh[k].start}`;
           if (mark(id)) push({ key: id, asset: a, type: 'Range', level: 'info',
-            message: `${name}: first 4H close above your ${n(trig, d)} long trigger (1 of 2): the ${t(fh[k].start)} bar closed at ${n(fh[k].close, d)} after ${n(fh[k - 1].close, d)}. Unconfirmed until a second 4H close above.` });
+            message: `${name}: first ${tf} close above your ${n(trig, d)} long trigger (1 of 2): the ${t(fh[k].start)} bar closed at ${n(fh[k].close, d)} after ${n(fh[k - 1].close, d)}. Unconfirmed until a second ${tf} close above.` });
         }
       }
     }
