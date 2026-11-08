@@ -59,3 +59,22 @@ describe('4H sweep and reclaim', () => {
     expect(sw.map(a => [a.key, a.level])).toEqual([['BTC|sweep4h|87300|high|2026-11-06T12:00:00.000Z', 'warn']]);
   });
 });
+
+describe('Index trigger level: daily close back above', () => {
+  it('alerts NQ closing back above 27,220 once, not while it stays below', () => {
+    const levels = (base.range_levels as never as Record<string, string>[]).map(l => l.asset === 'NDX' ? { ...l, range_low: '27220', mid: '29000', long_trigger_4h: '27220' } : l);
+    const qqq = j('ohlc_qqq').rows as { date: string; close: number }[];
+    // Fake a next session: QQQ well above the level x premium.
+    const next = { ...qqq[0], date: '2026-11-04', open: 690, high: 700, low: 680, close: 695 };
+    const prevQ = { ...qqq[0], close: 600, low: 590, high: 610, open: 605 };
+    const mk = (rows: unknown[]) => ({ ...base, range_levels: levels as never, ohlc_qqq: rows as never });
+    const t0 = new Date('2026-11-03T22:30:00Z'), t1 = new Date('2026-11-04T22:30:00Z');
+    const s0 = runEngine(null, mk([prevQ, ...qqq.slice(1)]), t0).state;
+    const r1 = runEngine(s0, mk([next, prevQ, ...qqq.slice(1)]), t1);
+    const hit = r1.alerts.filter(a => a.key.startsWith('NDX|reclaim1d|27220|'));
+    expect(hit).toHaveLength(1);
+    expect(hit[0].message).toContain('daily close back above your 27,220 trigger level');
+    const r2 = runEngine(r1.state, mk([next, prevQ, ...qqq.slice(1)]), new Date('2026-11-04T23:30:00Z'));
+    expect(r2.alerts.filter(a => a.key.startsWith('NDX|reclaim1d'))).toEqual([]);
+  });
+});

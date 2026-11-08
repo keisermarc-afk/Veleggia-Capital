@@ -191,6 +191,17 @@ export function runEngine(prev: AlertState | null, inp: EngineInput, now: Date):
       }
     }
     const trig = Number(lb.level.long_trigger_4h);
+    // Index trigger levels (added 8 Nov 2026): there is no ES/NQ intraday data on the FMP plan, so the 4H
+    // candles cannot be checked. Alert the daily close back above the level instead (ES bars, NQ estimate).
+    if (trig > 0 && (a === 'SPX' || a === 'NDX') && r.length >= 2) {
+      const last = r[r.length - 1], prevBar = r[r.length - 2];
+      if (last.c > trig && prevBar.c <= trig) {
+        const id = `${a}|reclaim1d|${trig}|${last.date}`;
+        const near = a === 'NDX' && Math.abs(last.c / trig - 1) <= 0.0015 ? ' Estimate, check your NQ1! chart.' : '';
+        if (mark(id)) push({ key: id, asset: a, type: 'Range', level: 'good',
+          message: `${name}: daily close back above your ${n(trig, d)} trigger level on ${last.date} (close ${n(last.c, d)}, previous ${n(prevBar.c, d)}). The 4H closes can't be checked on futures here, so confirm them on your chart.${near}` });
+      }
+    }
     if (trig > 0 && hourly?.length) {
       const fh = fourHourBars(hourly, now);
       const k = fh.length - 1;

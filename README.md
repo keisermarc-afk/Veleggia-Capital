@@ -60,6 +60,7 @@ npx wrangler dev
 - **When:** every hour at :05 UTC (crypto daily close at 00:05, every 4H close, ES futures close at 21:05/22:05) and at 16:20 New York on weekdays for the cash index close. Cron in `apps/app/wrangler.jsonc`.
 - **What:** `packages/alerts` follows the close-based rules of Claude's "Dashboard change alerts" task: regime confirmed, early signal, EMA50/EMA200 (crypto) and EMA50/EMA100/EMA200 (indices) close crosses, the two-close EMA50 exit, weekly trend, macro cycle, 200 hold rule, range signals, watch levels and the 4H long trigger. Every event alerts once (unique key). A continuing range break alerts once, not every day. A later FMP revision that flips a state alerts again, marked "revised data".
 - **4H sweep and reclaim (BTC, ETH, added 6 Nov 2026):** a completed 4H candle (00/04/08/12/16/20 UTC) that trades below the range low or a watch level and closes back above it alerts as a long trigger; one that trades above the range high or a watch level and closes back below alerts as a failed push. A touch that stays on the right side does not alert. If the macro cycle is not "Uptrend intact", the alert says the long is Setup Only risk. Test: `packages/alerts/test/sweep4h.test.ts` (BTC's real sweep of 75,000 on 6 Nov, alerted at 17:05 Zurich).
+- **Index trigger levels (ES, NQ, added 8 Nov 2026):** the FMP plan has no ES/NQ intraday data, so a 4H trigger level on SPX or NDX alerts on the daily close back above it (ES bars, NQ estimate) and the message asks Marc to confirm the 4H closes on his chart.
 - **Not here yet:** intraday price crosses, ETF flows, funding, insider trades (they stay in the Claude task).
 - **First run** stores the current state as a baseline and sends nothing.
 - **Failures:** every run is logged (`runs` table, shown in the Alerts tab). Three failed runs in a row send one "checks are failing" push, so silence never means "no signal" by mistake.
@@ -111,3 +112,9 @@ Known data limits (from the dashboard notes):
 ## Not investment advice
 
 This software applies Marc's own rules to market data. It does not give trade instructions.
+
+## Database workflow (manual)
+
+`.github/workflows/db.yml`, started by hand (or by Claude through the GitHub API):
+- `read` prints the live range levels, the latest level saves, the weekly plan, the last runs and alerts.
+- `apply` runs one SQL file from `ops/`, reviewed in git. Used to load a weekly plan written in chat: `npx vite-node tools/plan-sql.ts <weekly_plan.csv> ops/plan_<year>-W<nn>.sql` validates the plan with the app's own rules and writes the SQL.
