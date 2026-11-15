@@ -32,7 +32,7 @@
     // Cloudflare Access (login). Not secret; filled in after Access is set up.
     // ALLOWED_EMAILS: second check after Access, comma-separated (only Marc).
     "ACCESS_TEAM_DOMAIN": "keiser-marc.cloudflareaccess.com",
-    "ACCESS_AUD": "81b3b2f70465470b8d6821393e4dfdb01a5074e925305c94d28ff41edf4cdd07",
+    "ACCESS_AUD": "4f8c2112431814ddfce1eddcd4619d225dee5d4b968ac3eda43036288bcc3852",
     "ALLOWED_EMAILS": "keiser_marc@me.com"
   }
 }
