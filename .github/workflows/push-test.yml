@@ -1,0 +1,30 @@
+name: Push test
+
+# Started by hand (or by Claude through the GitHub API): sends a test push to every phone or browser
+# registered in the app and prints only counts, device type and HTTP status (no keys, no endpoints).
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Send test push
+        working-directory: apps/app
+        run: |
+          npx wrangler d1 execute veleggia --remote --json --command "SELECT v FROM app_kv WHERE k = 'vapid'" > "$RUNNER_TEMP/vapid.json"
+          npx wrangler d1 execute veleggia --remote --json --command "SELECT endpoint, data, created_at, user_agent FROM push_subscriptions" > "$RUNNER_TEMP/subs.json"
+          node ../../tools/push-test.mjs "$RUNNER_TEMP/vapid.json" "$RUNNER_TEMP/subs.json" "$RUNNER_TEMP/gone.sql"
+          if [ -s "$RUNNER_TEMP/gone.sql" ]; then npx wrangler d1 execute veleggia --remote --yes --file "$RUNNER_TEMP/gone.sql" > /dev/null && echo "Removed the gone subscriptions."; fi
+          rm -f "$RUNNER_TEMP/vapid.json" "$RUNNER_TEMP/subs.json" "$RUNNER_TEMP/gone.sql"
