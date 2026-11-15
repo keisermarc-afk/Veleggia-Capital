@@ -130,7 +130,7 @@ app.post('/api/push/unsubscribe', async c => {
 
 app.post('/api/push/test', async c => {
   const vapid = await getVapid(c.env.DB, new URL(c.req.url).origin);
-  const r = await sendToAll(c.env.DB, vapid, [noteFor({ key: 'test-' + Date.now(), asset: 'Veleggia', type: 'Test', level: 'info', message: 'Push alerts work. Range and rule signals will arrive like this.' })]);
+  const r = await sendToAll(c.env.DB, vapid, [noteFor({ key: 'test-' + Date.now(), asset: 'AFK Capital', type: 'Test', level: 'info', message: 'Push alerts work. Range and rule signals will arrive like this.' })]);
   return c.json(r);
 });
 
@@ -152,6 +152,6 @@ export default {
   fetch: app.fetch,
   // The schedule (wrangler.jsonc "triggers"): run the rule check and push new alerts.
   async scheduled(event: ScheduledController, env: Env, ctx: ExecutionContext) {
-    ctx.waitUntil(runCheck(env, new Date(event.scheduledTime), { send: true, origin: 'https://veleggia-capital.keiser-marc.workers.dev' }).then(() => undefined));
+    ctx.waitUntil(runCheck(env, new Date(event.scheduledTime), { send: true, origin: 'https://afk-capital.keiser-marc.workers.dev' }).then(() => undefined));
   },
 };

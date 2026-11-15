@@ -1,5 +1,5 @@
 {
-  "name": "veleggia-capital",
+  "name": "afk-capital",
   "private": true,
   "workspaces": [
     "packages/*",

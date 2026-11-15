@@ -63,7 +63,7 @@ export async function runCheck(env: Env, now: Date, opts: { send: boolean; origi
       if (results.length === 3 && results.every(r => !r.ok) && warned !== 'yes') {
         await kvSet(db, 'failure_warned', 'yes');
         const vapid = await getVapid(db, opts.origin);
-        await sendToAll(db, vapid, [{ title: 'Veleggia checks are failing', body: msg + ' Alerts are paused until this is fixed.', tag: 'check-failing', url: '/?tab=alerts' }]);
+        await sendToAll(db, vapid, [{ title: 'AFK Capital checks are failing', body: msg + ' Alerts are paused until this is fixed.', tag: 'check-failing', url: '/?tab=alerts' }]);
       }
     }
     return { ok: false, alerts: [], error: msg };

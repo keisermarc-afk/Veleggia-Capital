@@ -1,8 +1,8 @@
 {
-  // Veleggia Capital rules app. Secrets (FMP key, VAPID key, later Bybit read-only key) are set with
+  // AFK Capital rules app. Secrets (FMP key, VAPID key, later Bybit read-only key) are set with
   // `wrangler secret put NAME` or in the Cloudflare dashboard, never in this file or the repo.
   "$schema": "../../node_modules/wrangler/config-schema.json",
-  "name": "veleggia-capital",
+  "name": "afk-capital",
   // Marc's Cloudflare account (the id is not a secret).
   "account_id": "c4ad492baa9588736c3521811736ae6f",
   "main": "src/index.ts",
@@ -23,7 +23,7 @@
     {
       "binding": "DB",
       "database_name": "veleggia",
-      // D1 database "veleggia" in Marc's Cloudflare account (the id is not a secret).
+      // D1 database "veleggia" in Marc's Cloudflare account (the id is not a secret). The name is kept from the old working name: D1 databases cannot be renamed, and nobody sees it.
       "database_id": "4ee4fa3d-0b2a-4605-9eed-628833287851",
       "migrations_dir": "migrations"
     }

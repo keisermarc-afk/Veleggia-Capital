@@ -1,4 +1,4 @@
-// Veleggia app: edit range levels and the weekly plan. Plain JS, no build step.
+// AFK Capital app: edit range levels and the weekly plan. Plain JS, no build step.
 // Every value from the server is shown with textContent / .value, never as HTML.
 (() => {
   'use strict';
@@ -52,7 +52,7 @@
   function show(tab) {
     tabs.forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === tab)));
     document.querySelectorAll('.tab').forEach(s => { s.hidden = s.id !== 'tab-' + tab; });
-    try { localStorage.setItem('veleggia.tab', tab); } catch { /* storage may be blocked */ }
+    try { localStorage.setItem('afk.tab', tab); } catch { /* storage may be blocked */ }
     if (tab === 'history') loadHistory();
     if (tab === 'alerts') loadAlerts();
   }
@@ -243,7 +243,7 @@
     if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
       st.textContent = 'not available';
       help.textContent = isIOS && !standalone
-        ? 'On iPhone, alerts work only in the installed app: in Safari tap Share, then "Add to Home Screen", and open Veleggia from that icon.'
+        ? 'On iPhone, alerts work only in the installed app: in Safari tap Share, then "Add to Home Screen", and open AFK Capital from that icon.'
         : 'This browser does not support push alerts.';
       return;
     }
@@ -255,7 +255,7 @@
       off.hidden = false; test.hidden = false;
     } else if (Notification.permission === 'denied') {
       st.textContent = 'blocked'; st.className = 'bad';
-      help.textContent = isIOS ? 'Notifications are blocked. Turn them on in iPhone Settings > Notifications > Veleggia.' : 'Notifications are blocked for this site in the browser settings.';
+      help.textContent = isIOS ? 'Notifications are blocked. Turn them on in iPhone Settings > Notifications > AFK Capital.' : 'Notifications are blocked for this site in the browser settings.';
     } else {
       st.textContent = 'off'; st.className = '';
       help.textContent = 'Turn on alerts to get range and rule signals on this device.';
@@ -327,7 +327,7 @@
   api('/api/me').then(m => { $('#who').textContent = `Signed in as ${m.email} · not investment advice`; }).catch(e => banner(e.message));
   loadLevels(); loadPlan();
   let start = new URLSearchParams(location.search).get('tab') || 'levels';
-  if (!new URLSearchParams(location.search).get('tab')) { try { start = localStorage.getItem('veleggia.tab') || 'levels'; } catch { /* ignore */ } }
+  if (!new URLSearchParams(location.search).get('tab')) { try { start = localStorage.getItem('afk.tab') || 'levels'; } catch { /* ignore */ } }
   show(['levels', 'plan', 'alerts', 'history'].includes(start) ? start : 'levels');
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
 })();

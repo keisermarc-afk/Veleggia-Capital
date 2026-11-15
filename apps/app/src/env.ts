@@ -1,7 +1,7 @@
 export interface Env {
   DB: D1Database;
   ASSETS: Fetcher;
-  /** Cloudflare Access team domain, for example "veleggia.cloudflareaccess.com" (not secret). */
+  /** Cloudflare Access team domain, for example "<team>.cloudflareaccess.com" (not secret). */
   ACCESS_TEAM_DOMAIN?: string;
   /** Application Audience (AUD) tag of the Access application (not secret). */
   ACCESS_AUD?: string;

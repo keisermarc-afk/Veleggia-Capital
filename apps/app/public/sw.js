@@ -1,6 +1,6 @@
 // Service worker: makes the app installable and loads the app shell fast.
 // API calls always go to the network (levels and plans must never be stale).
-const CACHE = 'veleggia-shell-v4';
+const CACHE = 'afk-shell-v1';
 const SHELL = ['/', '/index.html', '/app.css', '/app.js', '/manifest.webmanifest', '/icons/icon-192.png'];
 
 self.addEventListener('install', (e) => {
@@ -21,7 +21,7 @@ self.addEventListener('fetch', (e) => {
 
 // Push alerts from the rule checks.
 self.addEventListener('push', (e) => {
-  let note = { title: 'Veleggia', body: 'New alert.' };
+  let note = { title: 'AFK Capital', body: 'New alert.' };
   try { note = e.data ? e.data.json() : note; } catch { note.body = e.data ? e.data.text() : note.body; }
   e.waitUntil(self.registration.showNotification(note.title, {
     body: note.body, tag: note.tag, icon: '/icons/icon-192.png', badge: '/icons/icon-192.png', data: { url: note.url || '/?tab=alerts' },
