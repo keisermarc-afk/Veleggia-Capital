@@ -2,7 +2,7 @@
 // The dashboard's own calc code (reference/dashboard-calcs.js) runs in a sandbox with a frozen clock,
 // next to packages/rules, for many moments in time, and the results are compared exactly.
 import { describe, it, expect } from 'vitest';
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import vm from 'node:vm';
 import { computeAll, nyClock, utcDay, type RuleInputs } from '../src';
@@ -47,6 +47,7 @@ function asOf(inp: RuleInputs, now: Date): RuleInputs {
     ...inp,
     btc_daily: cut(inp.btc_daily, u), eth_daily: cut(inp.eth_daily, u), ohlc_btc: cut(inp.ohlc_btc, u), ohlc_eth: cut(inp.ohlc_eth, u),
     spx_daily: cut(inp.spx_daily, ny), ndx_daily: cut(inp.ndx_daily, ny), ohlc_es: cut(inp.ohlc_es, ny), ohlc_qqq: cut(inp.ohlc_qqq, ny), ohlc_spx: cut(inp.ohlc_spx, ny),
+    ...(inp.ohlc_inj ? { ohlc_inj: cut(inp.ohlc_inj, u) } : {}),
   };
 }
 
@@ -55,6 +56,8 @@ function loadFixture(dir: string): RuleInputs {
   return {
     btc_daily: j('btc_daily'), eth_daily: j('eth_daily'), spx_daily: j('spx_daily'), ndx_daily: j('ndx_daily'),
     ohlc_btc: j('ohlc_btc'), ohlc_eth: j('ohlc_eth'), ohlc_es: j('ohlc_es'), ohlc_qqq: j('ohlc_qqq'), ohlc_spx: j('ohlc_spx'),
+    // INJ (range market only, added 15 Nov 2026) where the fixture has its bars.
+    ...(existsSync(join(dir, 'ohlc_inj.json')) ? { ohlc_inj: j('ohlc_inj') } : {}),
     // The dashboard reads attached CSV files as text cells; so does the reference here.
     range_levels: parseCsv(readFileSync(join(dir, 'range_levels.csv'), 'utf8')) as never,
     weekly_plan: parseCsv(readFileSync(join(dir, 'weekly_plan.csv'), 'utf8')) as never,

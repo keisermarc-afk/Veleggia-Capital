@@ -10,14 +10,14 @@ export interface RangeLevel {
 export type SignalKind = 'short' | 'long' | 'up' | 'down' | 'target' | 'watch' | 'none';
 
 export interface RangeWatch {
-  asset: 'BTC' | 'ETH' | 'SPX' | 'NDX';
+  asset: 'BTC' | 'ETH' | 'SPX' | 'NDX' | 'INJ';
   range_low: number; mid: number | null; mid_side: string; range_high: number;
   day: string; close: number; position: number; zone: string;
   signal: string; signal_kind: SignalKind; signal_day: string; volume_ratio: number | null;
   set_on: string; note: string;
 }
 
-const ALIAS: Record<string, RangeWatch['asset']> = { BTCUSD: 'BTC', XBT: 'BTC', ETHUSD: 'ETH', US500: 'SPX', SP500: 'SPX', GSPC: 'SPX', NAS100: 'NDX', US100: 'NDX', NQ: 'NDX' };
+const ALIAS: Record<string, RangeWatch['asset']> = { BTCUSD: 'BTC', XBT: 'BTC', ETHUSD: 'ETH', INJUSD: 'INJ', US500: 'SPX', SP500: 'SPX', GSPC: 'SPX', NAS100: 'NDX', US100: 'NDX', NQ: 'NDX' };
 
 /**
  * Range levels (framework 6.4) on the last 3 completed daily bars.
@@ -25,8 +25,8 @@ const ALIAS: Record<string, RangeWatch['asset']> = { BTCUSD: 'BTC', XBT: 'BTC', 
  * against QQQ x proxy_ratio x the ES futures premium (median of the last 5 days).
  * Port of the dashboard calc `range_watch`.
  */
-export function rangeWatch(range_levels: RangeLevel[], ohlc_btc: OhlcRow[], ohlc_eth: OhlcRow[], ohlc_es: OhlcRow[], ohlc_qqq: OhlcRow[], ohlc_spx: OhlcRow[], now: Date): RangeWatch[] {
-  const SRC: Record<RangeWatch['asset'], [OhlcRow[], boolean]> = { BTC: [ohlc_btc, true], ETH: [ohlc_eth, true], SPX: [ohlc_es, false], NDX: [ohlc_qqq, false] };
+export function rangeWatch(range_levels: RangeLevel[], ohlc_btc: OhlcRow[], ohlc_eth: OhlcRow[], ohlc_es: OhlcRow[], ohlc_qqq: OhlcRow[], ohlc_spx: OhlcRow[], now: Date, ohlc_inj: OhlcRow[] = []): RangeWatch[] {
+  const SRC: Record<RangeWatch['asset'], [OhlcRow[], boolean]> = { BTC: [ohlc_btc, true], ETH: [ohlc_eth, true], SPX: [ohlc_es, false], NDX: [ohlc_qqq, false], INJ: [ohlc_inj, true] };
   const todayUTC = utcDay(now);
   const { nyDay, nyMin } = nyClock(now);
   const out: RangeWatch[] = [];
@@ -80,7 +80,7 @@ export function rangeWatch(range_levels: RangeLevel[], ohlc_btc: OhlcRow[], ohlc
     const pos = (last.c - RL) / (RH - RL);
     const zone = pos > 1 ? 'Above the range' : pos < 0 ? 'Below the range' : pos >= 2 / 3 ? 'Upper third' : pos <= 1 / 3 ? 'Lower third' : 'Middle third';
     out.push({
-      asset, range_low: RL, mid: MID == null ? null : Math.round(MID * 100) / 100, mid_side: MID == null ? '' : (last.c >= MID ? 'above mid' : 'below mid'),
+      asset, range_low: RL, mid: MID == null ? null : Math.round(MID * (asset === 'INJ' ? 1000 : 100)) / (asset === 'INJ' ? 1000 : 100), mid_side: MID == null ? '' : (last.c >= MID ? 'above mid' : 'below mid'),
       range_high: RH, day: last.date, close: last.c, position: Math.round(pos * 1000) / 1000, zone,
       signal: signal || 'No signal', signal_kind: (kind || 'none') as SignalKind, signal_day: sday, volume_ratio: svol,
       set_on: String(lv.set_on || ''), note: String(lv.note || ''),
@@ -115,8 +115,8 @@ export interface LevelBars { asset: RangeWatch['asset']; RH: number; RL: number;
  * the NQ estimate for the Nasdaq). Same code path as rangeWatch's bar building; a test checks
  * that both give the same last bar at every moment.
  */
-export function rangeBars(range_levels: RangeLevel[], ohlc_btc: OhlcRow[], ohlc_eth: OhlcRow[], ohlc_es: OhlcRow[], ohlc_qqq: OhlcRow[], ohlc_spx: OhlcRow[], now: Date): LevelBars[] {
-  const SRC: Record<RangeWatch['asset'], [OhlcRow[], boolean]> = { BTC: [ohlc_btc, true], ETH: [ohlc_eth, true], SPX: [ohlc_es, false], NDX: [ohlc_qqq, false] };
+export function rangeBars(range_levels: RangeLevel[], ohlc_btc: OhlcRow[], ohlc_eth: OhlcRow[], ohlc_es: OhlcRow[], ohlc_qqq: OhlcRow[], ohlc_spx: OhlcRow[], now: Date, ohlc_inj: OhlcRow[] = []): LevelBars[] {
+  const SRC: Record<RangeWatch['asset'], [OhlcRow[], boolean]> = { BTC: [ohlc_btc, true], ETH: [ohlc_eth, true], SPX: [ohlc_es, false], NDX: [ohlc_qqq, false], INJ: [ohlc_inj, true] };
   const todayUTC = utcDay(now);
   const { nyDay, nyMin } = nyClock(now);
   const spxC: Record<string, number> = {};

@@ -19,12 +19,15 @@ import { DEFAULT_NDX_PER_QQQ, type CloseRow, type OhlcRow } from './util';
  *   ohlc_es               chart   historical-price-eod-full ESUSD            from today - 40 days
  *   ohlc_qqq              chart   historical-price-eod-full QQQ              from today - 40 days
  *   ohlc_spx              indexes index-historical-price-eod-full ^GSPC       from today - 40 days
+ *   ohlc_inj              crypto  cryptocurrency-historical-price-eod-full    from today - 40 days (INJUSD, optional)
  * The 900-day window matters: every EMA is seeded from the first closes in the window,
  * so a different window gives (slightly) different EMA values.
  */
 export interface RuleInputs {
   btc_daily: CloseRow[]; eth_daily: CloseRow[]; spx_daily: CloseRow[]; ndx_daily: CloseRow[];
   ohlc_btc: OhlcRow[]; ohlc_eth: OhlcRow[]; ohlc_es: OhlcRow[]; ohlc_qqq: OhlcRow[]; ohlc_spx: OhlcRow[];
+  /** INJ daily bars (crypto cryptocurrency-historical-price-eod-full INJUSD, 40 days); INJ is a range market only. */
+  ohlc_inj?: OhlcRow[];
   range_levels: RangeLevel[]; weekly_plan: PlanRow[];
 }
 
@@ -33,7 +36,7 @@ export const OHLC_DAYS = 40;
 
 /** Every rule state the dashboard shows, computed for one instant. */
 export function computeAll(inp: RuleInputs, now: Date, ndxPerQqq = DEFAULT_NDX_PER_QQQ) {
-  const range_watch = rangeWatch(inp.range_levels, inp.ohlc_btc, inp.ohlc_eth, inp.ohlc_es, inp.ohlc_qqq, inp.ohlc_spx, now);
+  const range_watch = rangeWatch(inp.range_levels, inp.ohlc_btc, inp.ohlc_eth, inp.ohlc_es, inp.ohlc_qqq, inp.ohlc_spx, now, inp.ohlc_inj || []);
   return {
     crypto_trend: cryptoTrend(inp.btc_daily, inp.eth_daily, now),
     equity_health: equityHealth(inp.spx_daily, inp.ndx_daily, now, ndxPerQqq),
