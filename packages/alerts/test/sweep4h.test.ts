@@ -96,3 +96,22 @@ describe('1H trigger timeframe', () => {
     expect(run('')).toEqual([]); // 4H: only one completed 4H candle, so no trigger yet
   });
 });
+
+describe('INJ range market', () => {
+  it('alerts a swing failure at the INJ range low on its own bars, without touching BTC', () => {
+    const levels = [...(base.range_levels as never as Record<string, string>[]),
+      { asset: 'INJ', range_high: '9.409', mid: '8.176', range_low: '6.764', set_on: '2026-11-15', note: '', proxy_ratio: '', watch_levels: '6.068', long_trigger_4h: '', trigger_tf: '' }];
+    const inj = [
+      { date: '2026-11-14', open: 8.065, high: 8.2392, low: 6.6638, close: 6.8084, volume: 99048509 },
+      { date: '2026-11-13', open: 7.4531, high: 8.3577, low: 7.1566, close: 8.0647, volume: 157838692 },
+      { date: '2026-11-12', open: 7.5156, high: 7.6017, low: 7.2724, close: 7.4531, volume: 86724584 },
+    ];
+    const t0 = new Date('2026-11-14T00:05:00Z'), t1 = new Date('2026-11-15T00:05:00Z');
+    const s0 = runEngine(null, { ...base, range_levels: levels as never, ohlc_extra: { INJ: inj.slice(1) } }, t0).state;
+    const r = runEngine(s0, { ...base, range_levels: levels as never, ohlc_extra: { INJ: inj } }, t1);
+    const a = r.alerts.filter(x => x.asset === 'INJ');
+    expect(a.map(x => x.key)).toContain('INJ|Swing failure at range low|2026-11-14');
+    expect(a.find(x => x.key === 'INJ|Swing failure at range low|2026-11-14')!.message).toContain('Close 6.808, level 6.764');
+    expect(r.rules.range_watch.some(x => (x as { asset: string }).asset === 'INJ')).toBe(false);
+  });
+});

@@ -18,6 +18,7 @@
     { id: 'ETH', label: 'ETH', sub: 'Ethereum' },
     { id: 'SPX', label: 'ES (S&P)', sub: 'ES1! futures levels' },
     { id: 'NDX', label: 'NQ (est.)', sub: 'NQ1! futures levels' },
+    { id: 'INJ', label: 'INJ', sub: 'Injective' },
   ];
   const SECTIONS = [
     { id: 'headline', title: 'Headline', hint: 'The week in one or two sentences', max: 1 },
@@ -94,7 +95,7 @@
         field('Mid', 'mid', r.mid, { numeric: true, hint: 'Empty = no mid' }),
         field('Range low', 'range_low', r.range_low, { numeric: true })),
       field('Watch levels', 'watch_levels', (r.watch_levels || '').split(';').filter(Boolean).join('; '), { hint: 'Separate with ;', placeholder: 'e.g. 2178; 1985' }),
-      a.id === 'BTC' || a.id === 'ETH'
+      a.id === 'BTC' || a.id === 'ETH' || a.id === 'INJ'
         ? mk('div', { class: 'row3' },
             field('Long trigger', 'long_trigger_4h', r.long_trigger_4h, { numeric: true, hint: 'Two closes above it' }),
             tfField(r.trigger_tf))

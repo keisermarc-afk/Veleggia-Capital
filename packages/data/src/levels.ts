@@ -1,11 +1,11 @@
 // Range levels: validation and the exact CSV format the dashboard's range_levels dataset reads
 // (see claude/dashboard_operations.md, "Range levels").
 
-export const ASSETS = ['BTC', 'ETH', 'SPX', 'NDX'] as const;
+export const ASSETS = ['BTC', 'ETH', 'SPX', 'NDX', 'INJ'] as const;
 export type Asset = (typeof ASSETS)[number];
 
 /** How each asset is shown to Marc: index levels are futures levels (ES1!, NQ1!). */
-export const ASSET_LABEL: Record<Asset, string> = { BTC: 'BTC', ETH: 'ETH', SPX: 'ES (S&P)', NDX: 'NQ (est.)' };
+export const ASSET_LABEL: Record<Asset, string> = { BTC: 'BTC', ETH: 'ETH', SPX: 'ES (S&P)', NDX: 'NQ (est.)', INJ: 'INJ' };
 
 export const LEVEL_COLUMNS = ['asset', 'range_high', 'mid', 'range_low', 'set_on', 'note', 'proxy_ratio', 'watch_levels', 'long_trigger_4h', 'trigger_tf'] as const;
 export type LevelRow = Record<(typeof LEVEL_COLUMNS)[number], string>;
@@ -38,7 +38,7 @@ export function validateLevel(input: Record<string, unknown>, today: string, pre
   { ok: true; row: LevelRow } | { ok: false; errors: FieldError[] } {
   const errors: FieldError[] = [];
   const asset = String(input.asset ?? '').trim().toUpperCase() as Asset;
-  if (!ASSETS.includes(asset)) errors.push({ field: 'asset', message: 'Asset must be BTC, ETH, SPX or NDX.' });
+  if (!ASSETS.includes(asset)) errors.push({ field: 'asset', message: 'Asset must be BTC, ETH, SPX, NDX or INJ.' });
 
   const num = (f: string, label: string, required: boolean) => {
     const v = normNumber(input[f]);

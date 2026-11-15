@@ -29,8 +29,10 @@ export async function runCheck(env: Env, now: Date, opts: { send: boolean; origi
     const { results: levels } = await db.prepare('SELECT * FROM range_levels').all<LevelRow>();
     const { results: plan } = await db.prepare('SELECT * FROM weekly_plan ORDER BY pos').all<PlanRow>();
     // Hourly bars for every crypto range (4H sweeps, 4H triggers).
-    const hourlyFor = levels.filter(l => l.asset === 'BTC' || l.asset === 'ETH').map(l => l.asset);
-    const market = await fetchMarketData(env.FMP_API_KEY || '', now, hourlyFor, env.DEV_FMP_BASE_URL || undefined);
+    const hourlyFor = levels.filter(l => l.asset === 'BTC' || l.asset === 'ETH' || l.asset === 'INJ').map(l => l.asset);
+    // Extra crypto range markets (INJ, 15 Nov 2026): daily bars only for the range checks; no EMA rules.
+    const extraFor = levels.filter(l => l.asset === 'INJ').map(l => l.asset);
+    const market = await fetchMarketData(env.FMP_API_KEY || '', now, hourlyFor, env.DEV_FMP_BASE_URL || undefined, extraFor);
     const prev = await kvGet<AlertState>(db, 'alert_state');
     const { alerts, state, rules } = runEngine(prev, { ...market, range_levels: levels, weekly_plan: plan } as never, now);
     const at = zurich(now);

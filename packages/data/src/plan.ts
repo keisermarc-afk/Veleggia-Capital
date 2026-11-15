@@ -53,7 +53,7 @@ export function validatePlan(input: PlanInput, today: string): { ok: true; rows:
     if (!title) errors.push({ field: at('title'), message: `Row ${i + 1}: title is required.` });
     let asset = clean(r.asset).toUpperCase();
     if (section === 'exit' || section === 'long') {
-      if (!ASSETS.includes(asset as Asset)) errors.push({ field: at('asset'), message: `Row ${i + 1}: pick the market (BTC, ETH, SPX or NDX).` });
+      if (!ASSETS.includes(asset as Asset)) errors.push({ field: at('asset'), message: `Row ${i + 1}: pick the market (BTC, ETH, SPX, NDX or INJ).` });
     } else asset = '';
     const row: PlanRow = {
       id: '', week, week_start: ws, week_end, written, section, asset,

@@ -20,7 +20,7 @@ async function get(base: string, key: string, path: string, params: Record<strin
 }
 
 /** `base` is only overridden in local development (a mock server with the test fixtures). */
-export async function fetchMarketData(key: string, now: Date, hourlyFor: string[], base = FMP) {
+export async function fetchMarketData(key: string, now: Date, hourlyFor: string[], base = FMP, extraFor: string[] = []) {
   if (!key) throw new FmpError('FMP_API_KEY is not set in the Worker secrets.');
   const t = now.getTime();
   const hist = day(t - HISTORY_DAYS * 864e5), ohlc = day(t - OHLC_DAYS * 864e5), hrs = day(t - 3 * 864e5);
@@ -30,8 +30,11 @@ export async function fetchMarketData(key: string, now: Date, hourlyFor: string[
     light('BTCUSD'), light('ETHUSD'), light('^GSPC'), light('QQQ'),
     fullBars('BTCUSD'), fullBars('ETHUSD'), fullBars('ESUSD'), fullBars('QQQ'), fullBars('^GSPC'),
     ...hourlyFor.map(a => get(base, key, 'historical-chart/1hour', { symbol: a + 'USD', from: hrs })),
+    ...extraFor.map(a => fullBars(a + 'USD')),
   ]);
   const hourly: Record<string, never[]> = {};
   hourlyFor.forEach((a, i) => { hourly[a] = hourlyRows[i] as never[]; });
-  return { btc_daily, eth_daily, spx_daily, ndx_daily, ohlc_btc, ohlc_eth, ohlc_es, ohlc_qqq, ohlc_spx, hourly } as unknown as Record<string, never>;
+  const ohlc_extra: Record<string, never[]> = {};
+  extraFor.forEach((a, i) => { ohlc_extra[a] = hourlyRows[hourlyFor.length + i] as never[]; });
+  return { btc_daily, eth_daily, spx_daily, ndx_daily, ohlc_btc, ohlc_eth, ohlc_es, ohlc_qqq, ohlc_spx, hourly, ohlc_extra } as unknown as Record<string, never>;
 }

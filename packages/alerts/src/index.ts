@@ -9,7 +9,7 @@
 // Not covered here (stay in the Claude task): 3 and 4c intraday price checks, 5 ETF flows,
 // 6 funding, 6b insider trades.
 import {
-  computeAll, rangeBars, fourHourBars, oneHourBars,
+  computeAll, rangeBars, rangeWatch, fourHourBars, oneHourBars,
   type RuleInputs, type CryptoTrend, type EquityHealth, type EquityWeekly, type MacroCycle, type RangeWatch,
 } from '../../rules/src';
 
@@ -30,10 +30,12 @@ export interface AlertState {
 export interface EngineInput extends RuleInputs {
   /** FMP hourly bars per crypto asset with a 4H trigger, e.g. { ETH: [...] }. */
   hourly?: Record<string, { date: string; open: number | string; high: number | string; low: number | string; close: number | string }[]>;
+  /** Daily bars for extra crypto range markets without EMA rules, e.g. { INJ: [...] } (FMP historical-price-eod/full). */
+  ohlc_extra?: Record<string, unknown[]>;
 }
 
-const RANGE_NAME: Record<string, string> = { BTC: 'BTC', ETH: 'ETH', SPX: 'ES (S&P)', NDX: 'NQ (est.)' };
-const dec = (asset: string) => asset === 'BTC' || asset === 'NAS100' || asset === 'NDX' ? 0 : 2;
+const RANGE_NAME: Record<string, string> = { BTC: 'BTC', ETH: 'ETH', SPX: 'ES (S&P)', NDX: 'NQ (est.)', INJ: 'INJ' };
+const dec = (asset: string) => asset === 'BTC' || asset === 'NAS100' || asset === 'NDX' ? 0 : asset === 'INJ' ? 3 : 2;
 const n = (v: number, d: number) => v.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
 const pct = (x: number) => (x >= 0 ? '+' : '') + (x * 100).toFixed(1) + '%';
 /** "13:00–17:00 Zurich" for a 4H candle start (ISO, UTC). */
@@ -51,7 +53,7 @@ export function runEngine(prev: AlertState | null, inp: EngineInput, now: Date):
   const first = !prev;
   const state: AlertState = { v: 1, crypto: { ...(prev?.crypto || {}) }, index: { ...(prev?.index || {}) }, seen: [...(prev?.seen || [])], updated: now.toISOString() };
   const push = (a: Alert) => { if (!first) alerts.push(a); };
-  const macroOf = (asset: string) => rules.macro_cycle.find(m => m.asset === asset) as MacroCycle;
+  const macroOf = (asset: string) => rules.macro_cycle.find(m => m.asset === asset) as MacroCycle; // undefined for INJ (no macro cycle rule): guarded where INJ can reach it
 
   // ---------- Crypto: completed UTC daily closes ----------
   for (const ct of rules.crypto_trend as CryptoTrend[]) {
@@ -125,7 +127,16 @@ export function runEngine(prev: AlertState | null, inp: EngineInput, now: Date):
   const seen = new Set(state.seen);
   const mark = (id: string) => { if (!seen.has(id)) { seen.add(id); state.seen.push(id); return true; } return false; };
   const bars = rangeBars(inp.range_levels, inp.ohlc_btc, inp.ohlc_eth, inp.ohlc_es, inp.ohlc_qqq, inp.ohlc_spx, now);
-  for (const rw of rules.range_watch as RangeWatch[]) {
+  // Extra crypto range markets (INJ, 15 Nov 2026): the same range calc as BTC (completed UTC days), run on
+  // their own bars and relabelled. Kept outside computeAll, so the dashboard parity is unchanged.
+  const extraRw: RangeWatch[] = [];
+  for (const [sym, rows] of Object.entries(inp.ohlc_extra || {})) {
+    const lv = (inp.range_levels || []).filter(l => l.asset === sym).map(l => ({ ...l, asset: 'BTC' }));
+    if (!lv.length || !rows?.length) continue;
+    extraRw.push(...rangeWatch(lv as never, rows as never, [], [], [], [], now).map(x => ({ ...x, asset: sym }) as unknown as RangeWatch));
+    bars.push(...rangeBars(lv as never, rows as never, [], [], [], [], now).map(b => ({ ...b, asset: sym }) as never));
+  }
+  for (const rw of [...(rules.range_watch as RangeWatch[]), ...extraRw]) {
     if (rw.signal_kind === 'none') continue;
     const id = `${rw.asset}|${rw.signal}|${rw.signal_day}`;
     if (!mark(id)) continue;
@@ -166,7 +177,7 @@ export function runEngine(prev: AlertState | null, inp: EngineInput, now: Date):
     // 4H sweep and reclaim (added 6 Nov 2026): a completed 4H candle trades through the range low, the range
     // high or a watch level and closes back on the other side. Checks the last two completed candles, so a
     // missed hourly run is caught on the next one; each candle and level alerts once.
-    if (hourly?.length && (a === 'BTC' || a === 'ETH')) {
+    if (hourly?.length && (a === 'BTC' || a === 'ETH' || (a as string) === 'INJ')) {
       const fh = fourHourBars(hourly, now);
       const m = macroOf(a);
       const levels: { lv: number; what: string; below: boolean; above: boolean }[] = [
@@ -180,7 +191,7 @@ export function runEngine(prev: AlertState | null, inp: EngineInput, now: Date):
           if (L.below && c.low < L.lv && c.close > L.lv) {
             const id = `${a}|sweep4h|${L.lv}|low|${c.start}`;
             if (mark(id)) push({ key: id, asset: a, type: '4H sweep', level: 'good',
-              message: `${name}: 4H sweep of ${L.what} ${n(L.lv, d)} and close back above (${when} candle: low ${n(c.low, d)}, close ${n(c.close, d)}). This is the sweep-and-reclaim long trigger.${m.cycle !== 'Uptrend intact' ? ` Macro cycle is ${m.cycle}, so a long is Setup Only risk.` : ''}` });
+              message: `${name}: 4H sweep of ${L.what} ${n(L.lv, d)} and close back above (${when} candle: low ${n(c.low, d)}, close ${n(c.close, d)}). This is the sweep-and-reclaim long trigger.${m ? (m.cycle !== 'Uptrend intact' ? ` Macro cycle is ${m.cycle}, so a long is Setup Only risk.` : '') : ' No macro cycle rule for this market.'}` });
           }
           if (L.above && c.high > L.lv && c.close < L.lv) {
             const id = `${a}|sweep4h|${L.lv}|high|${c.start}`;
@@ -218,7 +229,7 @@ export function runEngine(prev: AlertState | null, inp: EngineInput, now: Date):
             if (ct && fh[k].close < ct.ema200) over.push(`daily EMA200 ${n(ct.ema200, d)}`);
             if (fh[k].close < lb.RL) over.push(`range low ${n(lb.RL, d)}`);
             push({ key: id, asset: a, type: 'Range', level: 'good',
-              message: `${name}: two ${tf} closes above ${n(trig, d)}, your long trigger is met (${t(fh[k - 1].start)} bar ${n(fh[k - 1].close, d)}, ${t(fh[k].start)} bar ${n(fh[k].close, d)}).${over.length ? ' Next overhead: ' + over.join(', ') + '.' : ''}${m.cycle !== 'Uptrend intact' ? ` Macro cycle is ${m.cycle}, so a long is Setup Only risk.` : ''}` });
+              message: `${name}: two ${tf} closes above ${n(trig, d)}, your long trigger is met (${t(fh[k - 1].start)} bar ${n(fh[k - 1].close, d)}, ${t(fh[k].start)} bar ${n(fh[k].close, d)}).${over.length ? ' Next overhead: ' + over.join(', ') + '.' : ''}${m && m.cycle !== 'Uptrend intact' ? ` Macro cycle is ${m.cycle}, so a long is Setup Only risk.` : ''}` });
           }
         } else if (above(k) && !above(k - 1)) {
           const id = `${a}|trigger${tf.toLowerCase()}|${trig}|1|${fh[k].start}`;
