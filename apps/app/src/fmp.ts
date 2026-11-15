@@ -13,14 +13,16 @@ async function get(base: string, key: string, path: string, params: Record<strin
   let res: Response;
   try { res = await fetch(`${base}/${path}?${q}`, { headers: { Accept: 'application/json' } }); }
   catch { throw new FmpError(`FMP ${path} ${params.symbol}: network error`); }
-  if (!res.ok) throw new FmpError(`FMP ${path} ${params.symbol}: HTTP ${res.status}`);
+  if (!res.ok) throw new FmpError(`FMP ${path} ${params.symbol}: HTTP ${res.status}${res.status === 401 ? ' (FMP rejects the API key: check FMP_API_KEY in the Worker secrets)' : ''}`);
   const data = await res.json().catch(() => null);
   if (!Array.isArray(data)) throw new FmpError(`FMP ${path} ${params.symbol}: unexpected answer${data && typeof data === 'object' && 'Error Message' in data ? ' (plan or key problem)' : ''}`);
   return data;
 }
 
 /** `base` is only overridden in local development (a mock server with the test fixtures). */
-export async function fetchMarketData(key: string, now: Date, hourlyFor: string[], base = FMP, extraFor: string[] = []) {
+export async function fetchMarketData(rawKey: string, now: Date, hourlyFor: string[], base = FMP, extraFor: string[] = []) {
+  // A key pasted into the Cloudflare dashboard can carry spaces, a line break or quotes: strip them.
+  const key = (rawKey || '').trim().replace(/^["']+|["']+$/g, '').trim();
   if (!key) throw new FmpError('FMP_API_KEY is not set in the Worker secrets.');
   const t = now.getTime();
   const hist = day(t - HISTORY_DAYS * 864e5), ohlc = day(t - OHLC_DAYS * 864e5), hrs = day(t - 3 * 864e5);
